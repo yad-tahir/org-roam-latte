@@ -4,18 +4,18 @@
 
 ## Features
 
-* **Fast:** Uses an optimized inverted search strategy. It scans the visible buffer text first and checks against a hash map ($O(1)$), rather than iterating through your entire database. It stays snappy even with thousands of nodes.
-* **Smart Linking:** Highlighted words are clickable.
+* **Fast:** Uses an optimized inverted search strategy. It scans _only_ the visible section of a buffer, and checks against a hash table. It stays snappy even with thousands of nodes. 
+* **Smart Linking:** Highlighted words are nivgatable.
     * **Click / RET**: Visit the node.
     * **M-RET**: Instantly convert the text into a formal Org-roam ID link.
-* **Pluralization:** Automatically handles pluralization (e.g., a node named "Algorithm" will highlight "algorithms" in your text).
-* **Org-roam Alias Support:** Recognizes and highlights node aliases.
+* **Pluralization:** Automatically handles pluralization (e.g., a node titled "Algorithm" will highlight "algorithms" in your text).
+* **Org-roam Alias Support:** Recognizes and highlights your node aliases as well.
 * **Context Aware:**
     * Ignores existing Org links.
     * Intelligent handling of code blocks (only highlights inside comments).
     * Adapts colors automatically for Light and Dark themes.
 
-## How it works
+## Great Performance
 
 Many "auto-linker" packages suffer from performance issues because they search the buffer for every single node in your database ($N \times M$ complexity).
 
@@ -24,7 +24,7 @@ Many "auto-linker" packages suffer from performance issues because they search t
 2.  When you scroll, it scans the *visible* text for word boundaries.
 3.  It checks those candidate words against the Hash Table ($O(1)$ lookup) 🚀.
 
-This ensures that scrolling remains buttery smooth, regardless of whether you have 100 notes or 10,000. This also ensures that there is no performance hit even when you open extermely large files.
+This ensures that scrolling remains is smooth, regardless of whether you have 100 notes or 10,000. This also ensures that there is no performance hit even when you open _extermely large files_.
 
 ## Installation
 
