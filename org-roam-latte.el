@@ -41,6 +41,9 @@
 ;; This implementation is designed to be snappy and minimizes UI redrawing to
 ;; maintain high performance.
 
+;;; Roadmap:
+;; - The heuristic for pluralization is a nice touch for a "fuzzy" feel, though English-specific.
+
 ;;; Code:
 
 (require 'org-roam)
