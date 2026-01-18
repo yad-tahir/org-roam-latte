@@ -1,4 +1,4 @@
-;;; org-roam-latte.el --- Highlight org roam node -*- lexical-binding: t; -*-
+;;; org-roam-latte.el --- Auto-highlight unlinked Org-roam references -*- lexical-binding: t; -*-
 
 ;;  ___
 ;; / _ \ _ __ __ _
@@ -17,8 +17,8 @@
 ;; URL: https://github.com/yad-tahir/org-roam-latte
 ;; Package-Requires: ((emacs "27.1") (org-roam "2.0"))
 ;; Version: 0.0.2
-;; Description: Automatically highlights words if they exist in org-roam
-;; Keywords: faces, outline
+;; Description: Auto-highlight unlinked Org-roam references
+;; Keywords: hypermedia, outlines, org-roam, convenience
 
 ;; This file is not part of GNU Emacs.
 
@@ -36,13 +36,12 @@
 ;; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Commentary:
-;; Collects titles and aliases found in the org-roam database. Latte then
-;; automatically highlights in a buffer where `org-roam-latte-mode' is active.
-;; This implementation is designed to be snappy and minimizes UI redrawing to
-;; maintain high performance.
-
-;;; Roadmap:
-;; - The heuristic for pluralization is a nice touch for a "fuzzy" feel, though English-specific.
+;;
+;; Org-roam Latte is a minor mode that highlights unlinked references to existing
+;; org-roam nodes. It scans your text for words matching existing org-roam node
+;; titles or aliases and highlights them, allowing you to quickly navigate to
+;; those nodes or convert the text into a formal link.
+;;
 
 ;;; Code:
 
@@ -50,16 +49,17 @@
 (require 'seq)
 
 (defgroup org-roam-latte nil
-  "A simple notebook manager with auto highlighting built on top of Org-mode."
+  "A minor mode that automatically highlights unlinked org-roam references."
   :group 'org-roam)
 
 (defcustom org-roam-latte-highlight-prog-comments t
-  "If enabled (t), highlight keywords in prog-mode comment sections only."
+  "When non-nil, highlight keywords inside comments when in programming modes."
   :group 'org-roam-latte
   :type 'boolean)
 
 (defcustom org-roam-latte-ignore-words '()
-  "The words in the list will not be treated as keywords."
+  "A list of strings to ignore.
+Words in this list will not be highlighted even if they match an Org-roam node."
   :group 'org-roam-latte
   :type '(repeat string))
 
@@ -69,7 +69,7 @@
     (define-key map (kbd "<RET>") 'org-roam-latte-open-at-point)
     (define-key map (kbd "<M-RET>") 'org-roam-latte-complete-at-point)
     map)
-  "Keymap for highlighted keywords in org-roam-latte.")
+  "Keymap active on highlighted unlinked org-roam references.")
 
 (defface org-roam-latte-keyword-face
   '((((class color) (background light))
@@ -77,43 +77,44 @@
     (((class color) (background dark))
      :underline (:color "cyan" :style wave))
     (t :inherit highlight))
-  "Face used to highlight keywords and topic titles."
+  "Face used to highlight unlinked org-roam references (node titles and aliases)."
   :group 'org-roam-latte)
 
 
 ;;; Internal variables
 
 (defvar org-roam-latte--keywords (make-hash-table :test 'equal)
-  "Holds list of keywords (node titles and aliases).
+  "Hash table containing all known Org-roam node titles and aliases.
 
-This global data structure is modified primarily by `org-roam-latte--db-modified'.
-Both `org-roam-latte--highlight-buffer' and `org-roam-latte--delete-overlays' use this list
-to update UI accordingly.")
+This structure is updated via `org-roam-latte--db-modified` hooks.
+Keys include the downcased title, aliases, and their pluralized forms.")
 
 (defvar org-roam-latte--initialized nil
-  "Holds t if org-roam-latte initialized and started. Otherwise, nil.")
+  "Non-nil if Org-roam-latte hooks and advice have been initialized.")
 
 (defvar-local org-roam-latte--prev-start-win 0
-  "Holds window start position before scrolling.")
+  "Window start position before the most recent scroll event.")
 
 (defvar-local org-roam-latte--prev-end-win 0
-  "Holds window end position before scrolling.")
+  "Window end position before the most recent scroll event.")
 
 (defvar-local org-roam-latte--prev-win nil
-  "Holds last window object this buffer used during scrolling.")
+  "The window object associated with the buffer during the last scroll.")
 
 ;;;
 ;;; Helpers
 ;;;
 
 (defun org-roam-latte--change-major-mode ()
-  "Called internally when the major mode has changed in the current buffer."
+  "Cleanup overlays when the major mode change."
   (org-roam-latte--delete-overlays nil nil t))
 
 (defun org-roam-latte--delete-overlays (&optional start end force)
-  "Delete overlays between START and END.
+  "Delete Latte overlays between START and END.
 
-When FORCE is non-nil, delete immediately without checking keyword validity."
+If FORCE is non-nil, delete overlays immediately.
+If FORCE is nil, only delete overlays that no longer match a valid keyword
+in `org-roam-latte--keywords`."
   (setq start (or start (point-min))
         end (or end (point-max)))
 
@@ -130,7 +131,7 @@ When FORCE is non-nil, delete immediately without checking keyword validity."
         (delete-overlay o)))))
 
 (defun org-roam-latte--overlay-exists (keyword start end)
-  "Return t if an overlay for KEYWORD exists between START and END."
+  "Return t if an overlay for KEYWORD already exists between START and END."
   (catch 'org-roam-latte--overlay-found
     (dolist (co (overlays-in start end))
       (when (equal keyword (overlay-get co 'org-roam-latte-keyword))
@@ -144,14 +145,18 @@ When FORCE is non-nil, delete immediately without checking keyword validity."
           nil)))))
 
 (defun org-roam-latte--phrase-checker (phrase)
-  "Returns t if PHRASE is a keyword."
+  "Return t if PHRASE is a known keyword in the database."
   (gethash phrase org-roam-latte--keywords))
 
 (defun org-roam-latte--highlight-buffers ()
+  "Trigger highlighting for all buffers where the mode is active."
   (dolist (buffer (buffer-list))
     (org-roam-latte--highlight-buffer nil nil buffer)))
 
 (defun org-roam-latte--highlight-buffer (&optional start end buffer)
+  "Highlight keywords in BUFFER between START and END positions.
+
+If BUFFER is nil, use current buffer. If START/END are nil, use the visible window."
   (setq buffer (or buffer (current-buffer)))
   (with-current-buffer buffer
     (when (bound-and-true-p org-roam-latte-mode)
@@ -161,10 +166,11 @@ When FORCE is non-nil, delete immediately without checking keyword validity."
           (org-roam-latte--make-overlays buffer b-start b-end))))))
 
 (defun org-roam-latte--make-overlays (buffer &optional start end)
-  "Highlights instances of keywords in BUFFER between START and END.
+  "Create overlays for keywords in BUFFER between START and END.
 
-This implementation scans the buffer text first (O(M)) and checks the hash table (O(1))"
-
+This function uses an inverted search strategy: it scans the buffer text for
+word boundaries (O(M)) and verifies them against the keyword hash table (O(1)).
+This avoids the performance penalty of iterating through the entire database."
   (with-current-buffer buffer
     (ignore-errors
       (setq start (or start (point-min))
@@ -184,8 +190,6 @@ This implementation scans the buffer text first (O(M)) and checks the hash table
                      (word-beg (save-excursion (backward-word) (point)))
                      (candidate (downcase (buffer-substring-no-properties word-beg word-end)))
                      ;; Check if this word starts a multi-word keyword
-                     ;; (This is a simple greedy match; for complex multi-word titles,
-                     ;; you might need a more aggressive lookahead)
                      (full-match (org-roam-latte--find-longest-match word-beg end)))
 
                 (when full-match
@@ -197,11 +201,10 @@ This implementation scans the buffer text first (O(M)) and checks the hash table
                     (goto-char match-end)
 
                     (unless (or (org-roam-latte--overlay-exists keyword-text match-beg match-end)
-                                ;; Avoid inside links
+                                ;; Avoid highlighting inside existing links
                                 (and (derived-mode-p 'org-mode)
                                      (eq (org-element-type (org-element-context)) 'link))
-                                ;; Handle prog-mode comments
-                                ;; from https://github.com/blorbx/evil-quickscope
+                                ;; Handle prog-mode comments logic
                                 (and org-roam-latte-highlight-prog-comments
                                      (derived-mode-p 'prog-mode)
                                      (not (nth 4 (syntax-ppss)))))
@@ -212,15 +215,18 @@ This implementation scans the buffer text first (O(M)) and checks the hash table
                         (overlay-put o 'keymap org-roam-latte-keyword-map)
                         (overlay-put o 'mouse-face 'highlight)
                         (overlay-put o 'org-roam-latte-keyword keyword-text)
+                        ;; Longer phrases get higher priority
                         (overlay-put o 'priority 100)))))))))))))
 
 (defun org-roam-latte--find-longest-match (start limit)
-  "Starting at START, look ahead to find the longest phrase that exists in the DB.
-Returns (start . end) cons cell or nil."
+  "Look ahead from START to find the longest phrase existing in the DB.
+Returns a cons cell (start . end) of the match, or nil.
+
+LIMIT determines where the search should stop."
+
   (let ((result nil)
         (current-end start))
-    ;; We optimistically grab up to 6 words ahead to check for multi-word titles
-    ;; Adjust '6' based on your average title length.
+    ;; Optimistically check up to 6 words ahead for multi-word titles.
     (dotimes (_ 6)
       (save-excursion
         (goto-char current-end)
@@ -232,7 +238,8 @@ Returns (start . end) cons cell or nil."
     result))
 
 (defun org-roam-latte--pluralize (phrase)
-  "Return the plural form of PHRASE using standard English grammar rules."
+  "Return the plural form of PHRASE using standard English grammar rules.
+Used to match pluralized text against singular node titles."
   (let ((case-fold-search t))
     (cond
      ;; Common irregulars
@@ -244,7 +251,6 @@ Returns (start . end) cons cell or nil."
      ((string-equal phrase "foot") "feet")
 
      ;; Words ending in s, x, z, ch, sh
-     ;; FIX: Wrapped in \\(...\\) so $ applies to all alternatives
      ((string-match-p "\\([sxz]\\|ch\\|sh\\)$" phrase)
       (concat phrase "es"))
 
@@ -252,14 +258,14 @@ Returns (start . end) cons cell or nil."
      ((string-match-p "[^aeiou]y$" phrase)
       (concat (substring phrase 0 -1) "ies"))
 
-     ;; Words ending in f or fe; remove f/fe, add "ves"
+     ;; Words ending in f or fe
      ((string-match-p "\\(li\\|wi\\|lo\\|lea\\|shel\\|thie\\)fe?$" phrase)
       (replace-regexp-in-string "fe?$" "ves" phrase))
 
      (t (concat phrase "s")))))
 
 (defun org-roam-latte--add-keyword (keyword)
-  "Add KEYWORD to `org-roam-latte--keywords` safely."
+  "Add KEYWORD and its plural form to the cache safely."
   (when (and keyword (not (string-blank-p keyword)))
     (unless (or (gethash keyword org-roam-latte--keywords)
                 (member keyword org-roam-latte-ignore-words))
@@ -267,7 +273,7 @@ Returns (start . end) cons cell or nil."
       (puthash (org-roam-latte--pluralize keyword) keyword org-roam-latte--keywords))))
 
 (defun org-roam-latte--keyword-at-point ()
-  "Return the highlighted keyword at point."
+  "Return the text of the Latte keyword overlay at point."
   (let ((p (overlays-at (point) t))
         (lk nil))
     (catch 'org-roam-latte--found
@@ -280,8 +286,9 @@ Returns (start . end) cons cell or nil."
         (word-at-point)
         "")))
 
-(defun org-roam-latte--db-modified (&rest args)
-  "Use org-roam database to updates `org-roam-latte--keywords'."
+(defun org-roam-latte--db-modified (&rest _args)
+  "Rebuild the keyword hash table from the Org-roam database.
+Populates `org-roam-latte--keywords` with titles and aliases."
   (setq org-roam-latte--keywords (make-hash-table :test 'equal))
   (dolist (node (org-roam-node-list))
     (let ((title (downcase (org-roam-node-title node)))
@@ -293,20 +300,22 @@ Returns (start . end) cons cell or nil."
   t)
 
 (defun org-roam-latte--after-change-function (beginning _end &optional _old-len)
-  "Highlight new keywords when text modification events occur."
+  "Hook to re-highlight the current line after text modifications.
+
+BEGINNING sets the starting position of line."
   (save-excursion
     (goto-char beginning)
     (org-roam-latte--highlight-buffer (line-beginning-position) (line-end-position))))
 
 (defun org-roam-latte--after-revert-function (&rest _args)
-  "Re-highlight keywords when revert events occur."
+  "Hook to re-highlight the buffer after a revert event."
   (org-roam-latte--highlight-buffer))
 
-(defun org-roam-latte--scroll-handler (win start)
-  "Called when window scroll events occur.
+(defun org-roam-latte--scroll-handler (win _start)
+  "Handle window scrolling to highlight only the visible region.
+This optimization minimizes the work done during rapid scrolling.
 
-This function is also triggered when a window is just attached to a buffer."
-
+WIN The window object in which the scroll event has occurred."
   (let* ((start (window-start win))
          (end (window-end win t))
          (diff (- start org-roam-latte--prev-start-win))
@@ -328,13 +337,11 @@ This function is also triggered when a window is just attached to a buffer."
           org-roam-latte--prev-win win)))
 
 (defun org-roam-latte--node-link-insert (keyword &optional beg end)
-  "Insert an org-roam node link.
+  "Convert KEYWORD into an Org-Roam node link using atomic change groups.
 
 If BEG and END are provided, replace the text in that range.
 If not, but the region is active, replace the active region.
-Otherwise, insert at point.
-
-KEYWORD is used as the initial input for the node search."
+Otherwise, insert at point."
   (let* ((use-region (and (not beg) (region-active-p)))
          (start (if use-region (region-beginning) beg))
          (final (if use-region (region-end) end))
@@ -365,7 +372,7 @@ KEYWORD is used as the initial input for the node search."
         (deactivate-mark)))))
 
 (defun org-roam-latte-complete-at-point (&optional point)
-  "Places a link for the node for the overlay at POINT."
+  "Convert the highlighted reference at POINT into a formal Org-roam link."
   (interactive)
   (setq point (or point (point)))
   (save-excursion
@@ -382,9 +389,16 @@ KEYWORD is used as the initial input for the node search."
 
 ;;;###autoload
 (define-minor-mode org-roam-latte-mode
-  "Minor mode highlights notebook's keywords throughout the buffer."
+  "Minor mode to highlight unlinked Org-roam references in the current buffer.
+
+When enabled:
+1. Scans the buffer for text matching titles or aliases in your Org-roam
+database.
+2. Highlights matching text (ignoring existing links).
+3. Provides keybindings set in `org-roam-latte-keyword-map' on highlighted
+terms."
   :init-value nil
-  :lighter " Latte"  ; Fixed: string instead of variable
+  :lighter " Latte"
   :keymap nil
   :require 'org-roam-latte
   :group 'org-roam-latte
@@ -419,7 +433,7 @@ KEYWORD is used as the initial input for the node search."
 
 ;;;###autoload
 (defun org-roam-latte-open-at-point ()
-  "Search for the keyword at highlighted point in the notebook."
+  "Visit the Org-roam node corresponding to the highlighted reference at point."
   (interactive)
   (let* ((context (org-element-context))
          (type (org-element-type context)))
