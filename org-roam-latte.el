@@ -161,7 +161,10 @@ When FORCE is non-nil, delete immediately without checking keyword validity."
           (org-roam-latte--make-overlays buffer b-start b-end))))))
 
 (defun org-roam-latte--make-overlays (buffer &optional start end)
-  "Highlights all the instances of keywords in BUFFER between START and END."
+  "Highlights instances of keywords in BUFFER between START and END.
+
+This implementation scans the buffer text first (O(M)) and checks the hash table (O(1))"
+
   (with-current-buffer buffer
     (ignore-errors
       (setq start (or start (point-min))
@@ -173,31 +176,60 @@ When FORCE is non-nil, delete immediately without checking keyword validity."
             ;; Cleanup invalid overlays first
             (org-roam-latte--delete-overlays start end)
 
-            (maphash (lambda (key value)
-                       (goto-char start)
-                       (while (word-search-forward key nil t)
-                         (let ((match-beg (match-beginning 0))
-                               (match-end (match-end 0)))
+            (goto-char start)
+            ;; Search for words/phrases in the buffer
+            (while (re-search-forward "\\b\\w+\\b" end t)
+              (let* ((word-end (point))
+                     ;; Back up to find the start of the word
+                     (word-beg (save-excursion (backward-word) (point)))
+                     (candidate (downcase (buffer-substring-no-properties word-beg word-end)))
+                     ;; Check if this word starts a multi-word keyword
+                     ;; (This is a simple greedy match; for complex multi-word titles,
+                     ;; you might need a more aggressive lookahead)
+                     (full-match (org-roam-latte--find-longest-match word-beg end)))
 
-                           (unless (or (org-roam-latte--overlay-exists value match-beg match-end)
-                                       (and (derived-mode-p 'org-mode)
-                                            (eq (org-element-type (org-element-context)) 'link))
-                                       ;; Handle prog-mode comments
-                                       ;; from https://github.com/blorbx/evil-quickscope
-                                       (and org-roam-latte-highlight-prog-comments
-                                            (derived-mode-p 'prog-mode)
-                                            (not (nth 4 (syntax-ppss)))))
+                (when full-match
+                  (let ((match-beg (car full-match))
+                        (match-end (cdr full-match))
+                        (keyword-text (downcase (buffer-substring-no-properties (car full-match) (cdr full-match)))))
 
-                             (let ((o (make-overlay match-beg match-end)))
-                               (overlay-put o 'face 'org-roam-latte-keyword-face)
-                               ;; Vanish when empty (deleted text):
-                               (overlay-put o 'evaporate t)
-                               (overlay-put o 'keymap org-roam-latte-keyword-map)
-                               (overlay-put o 'mouse-face 'highlight)
-                               (overlay-put o 'org-roam-latte-keyword value)
-                               ;; Longer phrases should be on top
-                               (overlay-put o 'priority (length key)))))))
-                     org-roam-latte--keywords)))))))
+                    ;; If we found a multi-word match, move point there to avoid double-counting
+                    (goto-char match-end)
+
+                    (unless (or (org-roam-latte--overlay-exists keyword-text match-beg match-end)
+                                ;; Avoid inside links
+                                (and (derived-mode-p 'org-mode)
+                                     (eq (org-element-type (org-element-context)) 'link))
+                                ;; Handle prog-mode comments
+                                ;; from https://github.com/blorbx/evil-quickscope
+                                (and org-roam-latte-highlight-prog-comments
+                                     (derived-mode-p 'prog-mode)
+                                     (not (nth 4 (syntax-ppss)))))
+
+                      (let ((o (make-overlay match-beg match-end)))
+                        (overlay-put o 'face 'org-roam-latte-keyword-face)
+                        (overlay-put o 'evaporate t)
+                        (overlay-put o 'keymap org-roam-latte-keyword-map)
+                        (overlay-put o 'mouse-face 'highlight)
+                        (overlay-put o 'org-roam-latte-keyword keyword-text)
+                        (overlay-put o 'priority 100)))))))))))))
+
+(defun org-roam-latte--find-longest-match (start limit)
+  "Starting at START, look ahead to find the longest phrase that exists in the DB.
+Returns (start . end) cons cell or nil."
+  (let ((result nil)
+        (current-end start))
+    ;; We optimistically grab up to 6 words ahead to check for multi-word titles
+    ;; Adjust '6' based on your average title length.
+    (dotimes (_ 6)
+      (save-excursion
+        (goto-char current-end)
+        (when (re-search-forward "\\b\\w+\\b" limit t)
+          (setq current-end (point))
+          (let ((phrase (downcase (buffer-substring-no-properties start current-end))))
+            (when (gethash phrase org-roam-latte--keywords)
+              (setq result (cons start current-end)))))))
+    result))
 
 (defun org-roam-latte--pluralize (phrase)
   "Return the plural form of PHRASE using standard English grammar rules."
