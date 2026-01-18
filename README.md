@@ -55,7 +55,7 @@ When you navigate to a highlighted word (declared in `org-roam-latte-keyword-map
 * **RET**: Open the node.
 * **M-RET** (Alt+Enter): Convert the highlighted text into a link.
 
-# Customization
+## Customization
 
 ### Customization Variables
 | Variable | Default | Description |
@@ -71,7 +71,7 @@ The highlighting face is `org-roam-latte-keyword-face`. It defaults to **Purple*
 (custom-set-faces
  '(org-roam-latte-keyword-face ((t (:inherit warning :underline (:style wave))))))
 ```
-# Fancy Screenshots!
+## Fancy Screenshots!
 
 ![Package In Action Screenshot 1](resources/images/screenshot1.png)
 ![Package In Action Screenshot 2](resources/images/screenshot2.png)
