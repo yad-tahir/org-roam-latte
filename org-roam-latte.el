@@ -56,7 +56,7 @@
   :group 'org-roam-latte
   :type 'boolean)
 
-(defcustom org-roam-latte-ignore-words '()
+(defcustom org-roam-latte-exclude-words '()
   "A list of strings to ignore.
 Words in this list will not be highlighted even if they match an Org-roam node."
   :group 'org-roam-latte
@@ -283,7 +283,7 @@ Used to match pluralized text against singular node titles."
   "Add KEYWORD and its plural form to the cache safely."
   (when (and keyword (not (string-blank-p keyword)))
     (unless (or (gethash keyword org-roam-latte--keywords)
-                (member keyword org-roam-latte-ignore-words))
+                (member keyword org-roam-latte-exclude-words))
       (puthash keyword keyword org-roam-latte--keywords)
       (puthash (org-roam-latte--pluralize keyword) keyword org-roam-latte--keywords))))
 
