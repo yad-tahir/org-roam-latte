@@ -91,14 +91,20 @@ Keys include the downcased title, aliases, and their pluralized forms.")
 (defvar org-roam-latte--initialized nil
   "Non-nil if Org-roam-latte hooks and advice have been initialized.")
 
-(defvar-local org-roam-latte--prev-start-win 0
-  "Window start position before the most recent scroll event.")
-
-(defvar-local org-roam-latte--prev-end-win 0
-  "Window end position before the most recent scroll event.")
-
 (defvar-local org-roam-latte--prev-win nil
-  "The window object associated with the buffer during the last scroll.")
+  "The window object associated with the buffer during the last scroll.
+
+This is used by `org-roam-latte--scroll-handler'")
+
+(defvar-local org-roam-latte--win-prev-start 0
+  "Window start position before the most recent scroll event.
+
+This is used by `org-roam-latte--scroll-handler'")
+
+(defvar-local org-roam-latte--win-prev-end 0
+  "Window end position before the most recent scroll event.
+
+This is used by `org-roam-latte--scroll-handler'")
 
 ;;;
 ;;; Helpers
@@ -317,22 +323,22 @@ This optimization minimizes the work done during rapid scrolling.
 WIN The window object in which the scroll event has occurred."
   (let* ((start (window-start win))
          (end (window-end win t))
-         (diff (- start org-roam-latte--prev-start-win))
+         (diff (- start org-roam-latte--win-prev-start))
          (full-render (or (not org-roam-latte--prev-win)
                           (not (eq org-roam-latte--prev-win win))
                           (> (abs diff)
                              ;; Less than 1/3 of window size
-                             (/ (- org-roam-latte--prev-end-win org-roam-latte--prev-start-win) 3)))))
+                             (/ (- org-roam-latte--win-prev-end org-roam-latte--win-prev-start) 3)))))
     (cond
      ((and (>= diff 1) (not full-render))
-      (org-roam-latte--highlight-buffer org-roam-latte--prev-end-win end))
+      (org-roam-latte--highlight-buffer org-roam-latte--win-prev-end end))
      ((and (< diff 1) (not full-render))
-      (org-roam-latte--highlight-buffer start org-roam-latte--prev-start-win))
+      (org-roam-latte--highlight-buffer start org-roam-latte--win-prev-start))
      (t
       (org-roam-latte--highlight-buffer start end)))
 
-    (setq org-roam-latte--prev-start-win start
-          org-roam-latte--prev-end-win end
+    (setq org-roam-latte--win-prev-start start
+          org-roam-latte--win-prev-end end
           org-roam-latte--prev-win win)))
 
 (defun org-roam-latte--node-link-insert (keyword &optional beg end)
