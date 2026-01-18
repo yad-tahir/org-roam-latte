@@ -26,7 +26,7 @@ Many "auto-linker" packages suffer from performance issues because they search t
 2.  When you scroll, it scans the *visible* text for word boundaries.
 3.  It checks those candidate words against the Hash Table ($O(1)$ lookup) 🚀.
 
-This ensures that scrolling remains buttery smooth, regardless of whether you have 100 notes or 10,000.
+This ensures that scrolling remains buttery smooth, regardless of whether you have 100 notes or 10,000. This also ensures that there is no performance hit even when you open extermely large files.
 
 ## Installation
 
