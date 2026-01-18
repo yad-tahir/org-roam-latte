@@ -73,9 +73,9 @@ Words in this list will not be highlighted even if they match an Org-roam node."
 
 (defface org-roam-latte-keyword-face
   '((((class color) (background light))
-     :underline (:color "purple" :style wave))
-    (((class color) (background dark))
      :underline (:color "cyan" :style wave))
+    (((class color) (background dark))
+     :underline (:color "purple" :style wave))
     (t :inherit highlight))
   "Face used to highlight unlinked org-roam references (node titles and aliases)."
   :group 'org-roam-latte)
