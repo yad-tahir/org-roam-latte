@@ -4,7 +4,7 @@
 
 ## Features
 
-* **Fast:** Uses an optimized inverted search strategy. It scans _only_ the visible section of a buffer, and checks against a hash table. It stays snappy even with thousands of nodes. 
+* **Fast:** Uses an optimized inverted search strategy. It scans _only_ the visible section of a buffer, and checks against a hash table. It stays snappy even with thousands of nodes.
 * **Smart Linking:** Highlighted words are nivgatable.
     * **Click / RET**: Visit the node.
     * **M-RET**: Instantly convert the text into a formal Org-roam ID link.
@@ -71,3 +71,7 @@ The highlighting face is `org-roam-latte-keyword-face`. It defaults to **Purple*
  '(org-roam-latte-keyword-face ((t (:inherit warning :underline (:style wave))))))
 ```
 
+# Fancy Screenshots!
+
+![Package In Action Screenshot 1](resources/images/screenshot1.png)
+![Package In Action Screenshot 2](resources/images/screenshot2.png)
