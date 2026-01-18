@@ -28,7 +28,7 @@ Many "auto-linker" packages suffer from performance issues because they search t
 
 This ensures that scrolling remains buttery smooth, regardless of whether you have 100 notes or 10,000.
 
-## 📦 Installation
+## Installation
 
 ### Manual
 Clone the repository and add it to your load path. Then, add hooks to enable it automatically for Org files and Programming buffers:
