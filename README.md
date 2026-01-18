@@ -1,8 +1,6 @@
 # ☕ Org-Roam Latte
 
-**Org-Roam Latte** is a minor mode that automatically highlights org-roam **unlinked references** in your buffer.
-
-It scans your current text and identifies words or phrases that match existing Org-roam nodes (titles and aliases). It brings the "Unlinked Mentions" feature found in tools like Obsidian or Roam Research directly into Emacs, helping you discover connections you might have missed.
+**Org-Roam Latte** is a minor mode that automatically highlights **unlinked org-roam references** in your buffer. It scans your current text and identifies words or phrases that match existing Org-roam nodes (titles and aliases). It brings the "Unlinked Mentions" feature found in tools like Obsidian or Roam Research directly into Emacs, helping you discover connections you might have missed.
 
 ## Features
 
