@@ -36,7 +36,6 @@
 ;; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Commentary:
-;;
 ;; Org-roam Latte is a minor mode that highlights unlinked references to existing
 ;; org-roam nodes. It scans your text for words matching existing org-roam node
 ;; titles or aliases and highlights them, allowing you to quickly navigate to
