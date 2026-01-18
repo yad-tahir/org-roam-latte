@@ -198,9 +198,10 @@ This avoids the performance penalty of iterating through the entire database."
                      (full-match (org-roam-latte--find-longest-match word-beg end)))
 
                 (when full-match
-                  (let ((match-beg (car full-match))
-                        (match-end (cdr full-match))
-                        (keyword-text (downcase (buffer-substring-no-properties (car full-match) (cdr full-match)))))
+                  (let* ((match-beg (car full-match))
+                         (match-end (cdr full-match))
+                         (keyword-text (downcase (buffer-substring-no-properties (car full-match) (cdr full-match))))
+                         (node-name (gethash keyword-text org-roam-latte--keywords)))
 
                     ;; If we found a multi-word match, move point there to avoid double-counting
                     (goto-char match-end)
@@ -221,7 +222,7 @@ This avoids the performance penalty of iterating through the entire database."
                         (overlay-put o 'evaporate t)
                         (overlay-put o 'keymap org-roam-latte-keyword-map)
                         (overlay-put o 'mouse-face 'highlight)
-                        (overlay-put o 'org-roam-latte-keyword keyword-text)
+                        (overlay-put o 'org-roam-latte-keyword node-name)
                         ;; Longer phrases get higher priority
                         (overlay-put o 'priority 100)))))))))))))
 
