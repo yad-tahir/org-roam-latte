@@ -17,3 +17,36 @@ It scans your current text and identifies words or phrases that match existing O
     * Intelligent handling of code blocks (only highlights inside comments).
     * Adapts colors automatically for Light and Dark themes.
 
+## How it works
+
+Many "auto-linker" packages suffer from performance issues because they search the buffer for every single node in your database ($N \times M$ complexity).
+
+**Org-Roam Latte is different.**
+1.  On startup (or DB sync), it builds a fast Hash Table of your titles and aliases.
+2.  When you scroll, it scans the *visible* text for word boundaries.
+3.  It checks those candidate words against the Hash Table ($O(1)$ lookup) 🚀.
+
+This ensures that scrolling remains buttery smooth, regardless of whether you have 100 notes or 10,000.
+
+## 📦 Installation
+
+### Manual
+Clone the repository and add it to your load path. Then, add hooks to enable it automatically for Org files and Programming buffers:
+
+```elisp
+(add-to-list 'load-path "/path/to/org-roam-latte")
+(require 'org-roam-latte)
+
+;; Enable in Org buffers
+(add-hook 'org-mode-hook #'org-roam-latte-mode)
+;; Enable in Programming buffers (highlights comments only)
+(add-hook 'prog-mode-hook #'org-roam-latte-mode)
+```
+
+### Use-package
+```elisp
+(use-package org-roam-latte
+  :straight (:host github :repo "yad-tahir/org-roam-latte")
+  :hook ((org-mode . org-roam-latte-mode)
+         (prog-mode . org-roam-latte-mode)))
+```
