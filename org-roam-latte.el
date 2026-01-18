@@ -1,4 +1,4 @@
-;;; org-roam-latte.el --- Help Org roam a bit. -*- lexical-binding: t; -*-
+;;; org-roam-latte.el --- Highlight org roam node -*- lexical-binding: t; -*-
 ;;;
 
 ;;   ___
@@ -15,18 +15,12 @@
 ;;     |_| \_\___/ \__,_|_| |_| |_| |_____\__,_|\__|\__\___|
 ;;
 
-;;; Summary:
-;; org-roam-latte - Auto-highlights words based on the records in org-roam's database.
-;;
-;; Author: Dr. Yad Tahir <yad (at) ieee.org>
-;; Keywords: org-roam, auto-highlighting, org-mode.
-;;
-;;; Commentary:
-;; This file is part of a simple note-taking system where notes are stored
-;; in org-roam files. This package collects the titles found in the
-;; org-roam database. org-roam-latte then automatically highlights keywords when
-;; `org-roam-latte-mode' is active. This implementation is designed to be snappy
-;; and minimizes  UI redrawing to maintain high performance.
+;; Author: Yad Tahir <yad at ieee.org>
+;; URL: https://github.com/yad-tahir/org-roam-latte
+;; Package-Requires: ((emacs "27.1"))
+;; Version: 0.0.1
+;; Description: Automatically highlights words if they exist in org-roam
+;; Keywords: faces, outline
 
 ;; This file is not part of GNU Emacs.
 
@@ -43,9 +37,11 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-;;; Road Map and Hopes:
-;; - Make org-roam-latte less aggressive towards finding plural nouns.
-;;
+;;; Commentary:
+;; Collects titles and alias found in the org-roam database. Latte then
+;; automatically highlights in a buffer where `org-roam-latte-mode' is active.
+;; This implementation is designed to be snappy and minimizes UI redrawing to
+;; maintain high performance.
 
 ;;; Code:
 
