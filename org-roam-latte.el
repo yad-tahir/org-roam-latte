@@ -62,6 +62,14 @@ Words in this list will not be highlighted even if they match an Org-roam node."
   :group 'org-roam-latte
   :type '(repeat string))
 
+(defcustom org-roam-latte-excluded-org-elements '(link node-property keyword)
+  "List of Org element types where highlight should not be created.
+
+Common types include 'link, 'node-property, 'keyword, 'code, and 'verbatim.
+See `org-element-all-elements' for a comprehensive list."
+  :type '(repeat symbol)
+  :group 'org-roam-latte)
+
 (defvar org-roam-latte-keyword-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "<mouse-1>") 'org-roam-latte-open-at-point)
@@ -207,11 +215,10 @@ This avoids the performance penalty of iterating through the entire database."
                     (goto-char match-end)
 
                     (unless (or (org-roam-latte--overlay-exists keyword-text match-beg match-end)
-                                ;; Avoid highlighting inside existing links
                                 (and (derived-mode-p 'org-mode)
-                                     (or (eq (org-element-type (org-element-context)) 'link)
-                                         (eq (org-element-type (org-element-context)) 'node-property)
-                                         (eq (org-element-type (org-element-context)) 'keyword)))
+                                     ;; Avoid highlighting on excluded elements
+                                     (memq (org-element-type (org-element-context))
+                                           org-roam-latte-excluded-org-elements))
                                 ;; Handle prog-mode comments logic
                                 (and org-roam-latte-highlight-prog-comments
                                      (derived-mode-p 'prog-mode)

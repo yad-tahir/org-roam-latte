@@ -61,6 +61,7 @@ When you navigate to a highlighted word (declared in `org-roam-latte-keyword-map
 | Variable | Default | Description |
 | :--- | :--- | :--- |
 | `org-roam-latte-ignore-words` | `'()` | A list of strings to exclude from highlighting. |
+| `org-roam-latte-excluded-org-elements` | `'(link node-property keyword)` | A list of org element types to exclude from highlighting. |
 | `org-roam-latte-highlight-prog-comments` | `t` | If `t`, Latte will highlight keywords inside comments in programming modes. |
 
 ### Theming
@@ -70,7 +71,6 @@ The highlighting face is `org-roam-latte-keyword-face`. It defaults to **Purple*
 (custom-set-faces
  '(org-roam-latte-keyword-face ((t (:inherit warning :underline (:style wave))))))
 ```
-
 # Fancy Screenshots!
 
 ![Package In Action Screenshot 1](resources/images/screenshot1.png)
