@@ -208,7 +208,9 @@ This avoids the performance penalty of iterating through the entire database."
                     (unless (or (org-roam-latte--overlay-exists keyword-text match-beg match-end)
                                 ;; Avoid highlighting inside existing links
                                 (and (derived-mode-p 'org-mode)
-                                     (eq (org-element-type (org-element-context)) 'link))
+                                     (or (eq (org-element-type (org-element-context)) 'link)
+                                         (eq (org-element-type (org-element-context)) 'node-property)
+                                         (eq (org-element-type (org-element-context)) 'keyword)))
                                 ;; Handle prog-mode comments logic
                                 (and org-roam-latte-highlight-prog-comments
                                      (derived-mode-p 'prog-mode)
