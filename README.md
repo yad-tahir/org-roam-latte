@@ -50,3 +50,26 @@ Clone the repository and add it to your load path. Then, add hooks to enable it 
   :hook ((org-mode . org-roam-latte-mode)
          (prog-mode . org-roam-latte-mode)))
 ```
+
+## Interactions
+When you navigate to a highlighted word (declared in `org-roam-latte-keyword-map`):
+* **<Mouse-1> (Left Click)**: Open the node.
+* **RET**: Open the node.
+* **M-RET** (Alt+Enter): Convert the highlighted text into a link.
+
+# Customization
+
+### Customization Variables
+| Variable | Default | Description |
+| :--- | :--- | :--- |
+| `org-roam-latte-ignore-words` | `'()` | A list of strings to exclude from highlighting. |
+| `org-roam-latte-highlight-prog-comments` | `t` | If `t`, Latte will highlight keywords inside comments in programming modes. |
+
+### Theming
+The highlighting face is `org-roam-latte-keyword-face`. It defaults to **Purple** (Light Mode) or **Cyan** (Dark Mode) with a wavy underline. You can customize this in your config, e.g.:
+
+```elisp
+(custom-set-faces
+ '(org-roam-latte-keyword-face ((t (:inherit warning :underline (:style wave))))))
+```
+
