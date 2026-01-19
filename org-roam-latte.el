@@ -130,10 +130,6 @@ This is used by `org-roam-latte--scroll-handler'")
 ;;; Helpers
 ;;;
 
-(defun org-roam-latte--change-major-mode ()
-  "Cleanup overlays when the major mode change."
-  (org-roam-latte--delete-overlays nil nil t))
-
 (defun org-roam-latte--delete-overlays (&optional start end force)
   "Delete Latte overlays between START and END.
 
@@ -189,6 +185,26 @@ window."
         (let ((b-start (or start (window-start b-win)))
               (b-end (or end (window-end b-win t))))
           (org-roam-latte--make-overlays buffer b-start b-end))))))
+
+(defun org-roam-latte--find-longest-match (start limit)
+  "Look ahead from START to find the longest phrase existing in the DB.
+Returns a cons cell (start . end) of the match, or nil.
+
+LIMIT determines where the search should stop."
+
+  (let ((result nil)
+        (current-end start))
+    ;; Optimistically check up to 6 words ahead for multi-word titles.
+    (dotimes (_ 6)
+      (save-excursion
+        (goto-char current-end)
+        (when (re-search-forward "\\b\\w+\\b" limit t)
+          (setq current-end (point))
+          (let ((phrase (downcase
+                         (buffer-substring-no-properties start current-end))))
+            (when (gethash phrase org-roam-latte--keywords)
+              (setq result (cons start current-end)))))))
+    result))
 
 (defun org-roam-latte--make-overlays (buffer &optional start end)
   "Create overlays for keywords in BUFFER between START and END.
@@ -253,26 +269,6 @@ This avoids the performance penalty of iterating through the entire database."
                         ;; Longer phrases get higher priority
                         (overlay-put o 'priority 100)))))))))))))
 
-(defun org-roam-latte--find-longest-match (start limit)
-  "Look ahead from START to find the longest phrase existing in the DB.
-Returns a cons cell (start . end) of the match, or nil.
-
-LIMIT determines where the search should stop."
-
-  (let ((result nil)
-        (current-end start))
-    ;; Optimistically check up to 6 words ahead for multi-word titles.
-    (dotimes (_ 6)
-      (save-excursion
-        (goto-char current-end)
-        (when (re-search-forward "\\b\\w+\\b" limit t)
-          (setq current-end (point))
-          (let ((phrase (downcase
-                         (buffer-substring-no-properties start current-end))))
-            (when (gethash phrase org-roam-latte--keywords)
-              (setq result (cons start current-end)))))))
-    result))
-
 (defun org-roam-latte--pluralize (phrase)
   "Return the plural form of PHRASE using standard English grammar rules.
 Used to match pluralized text against singular node titles."
@@ -310,6 +306,40 @@ Used to match pluralized text against singular node titles."
                keyword
                org-roam-latte--keywords))))
 
+(defun org-roam-latte--node-link-insert (keyword &optional beg end)
+  "Convert KEYWORD into an Org-Roam node link using atomic change groups.
+
+If BEG and END are provided, replace the text in that range.
+If not, but the region is active, replace the active region.
+Otherwise, insert at point."
+  (let* ((use-region (and (not beg) (region-active-p)))
+         (start (if use-region (region-beginning) beg))
+         (final (if use-region (region-end) end))
+         (replace-p (and start final))
+         (original-text (when replace-p
+                          (org-link-display-format
+                           (buffer-substring-no-properties start final))))
+         ;; We gather all user input BEFORE starting the atomic change group.
+         (node (org-roam-node-read keyword nil))
+         (description (or original-text
+                          (org-roam-node-formatted node))))
+
+    (when (org-roam-node-id node)
+      (atomic-change-group
+        (when replace-p
+          (delete-region start final))
+
+        (insert (org-link-make-string
+                 (concat "id:" (org-roam-node-id node))
+                 description))
+
+        ;; Trigger hooks
+        (run-hook-with-args 'org-roam-post-node-insert-hook
+                            (org-roam-node-id node)
+                            description))
+      (when use-region
+        (deactivate-mark)))))
+
 (defun org-roam-latte--keyword-at-point ()
   "Return the text of the Latte keyword overlay at point."
   (let ((p (overlays-at (point) t))
@@ -323,6 +353,10 @@ Used to match pluralized text against singular node titles."
           (buffer-substring-no-properties (region-beginning) (region-end)))
         (word-at-point)
         "")))
+
+;;
+;; Hooks and Advisors
+;;
 
 (defun org-roam-latte--db-modified (&rest _args)
   "Rebuild the keyword hash table from the Org-roam database.
@@ -376,40 +410,13 @@ WIN The window object in which the scroll event has occurred."
           org-roam-latte--win-prev-end end
           org-roam-latte--prev-win win)))
 
-(defun org-roam-latte--node-link-insert (keyword &optional beg end)
-  "Convert KEYWORD into an Org-Roam node link using atomic change groups.
+(defun org-roam-latte--change-major-mode ()
+  "Cleanup overlays when the major mode change."
+  (org-roam-latte--delete-overlays nil nil t))
 
-If BEG and END are provided, replace the text in that range.
-If not, but the region is active, replace the active region.
-Otherwise, insert at point."
-  (let* ((use-region (and (not beg) (region-active-p)))
-         (start (if use-region (region-beginning) beg))
-         (final (if use-region (region-end) end))
-         (replace-p (and start final))
-         (original-text (when replace-p
-                          (org-link-display-format
-                           (buffer-substring-no-properties start final))))
-         ;; We gather all user input BEFORE starting the atomic change group.
-         (node (org-roam-node-read keyword nil))
-         (description (or original-text
-                          (org-roam-node-formatted node))))
-
-    (when (org-roam-node-id node)
-      (atomic-change-group
-        (when replace-p
-          (delete-region start final))
-
-        (insert (org-link-make-string
-                 (concat "id:" (org-roam-node-id node))
-                 description))
-
-        ;; Trigger hooks
-        (run-hook-with-args 'org-roam-post-node-insert-hook
-                            (org-roam-node-id node)
-                            description))
-
-      (when use-region
-        (deactivate-mark)))))
+;;
+;; Public functions
+;;
 
 ;;;###autoload
 (defun org-roam-latte-complete-at-point (&optional point)
@@ -426,6 +433,16 @@ Otherwise, insert at point."
          (overlay-start overlay)
          (overlay-end overlay))
       (message "No org-roam-latte overlay found at point."))))
+
+;;;###autoload
+(defun org-roam-latte-open-at-point ()
+  "Visit the Org-roam node corresponding to the highlighted reference at point."
+  (interactive)
+  (let* ((context (org-element-context))
+         (type (org-element-type context)))
+    (if (memq type '(link))
+        (org-open-at-point)
+      (org-roam-node-find nil (org-roam-latte--keyword-at-point)))))
 
 ;;;
 ;;; Minor mode
@@ -474,16 +491,6 @@ terms."
       (remove-hook 'after-change-functions 'org-roam-latte--after-change-function t)
       (remove-hook 'change-major-mode-hook 'org-roam-latte--change-major-mode t)))
   t)
-
-;;;###autoload
-(defun org-roam-latte-open-at-point ()
-  "Visit the Org-roam node corresponding to the highlighted reference at point."
-  (interactive)
-  (let* ((context (org-element-context))
-         (type (org-element-type context)))
-    (if (memq type '(link))
-        (org-open-at-point)
-      (org-roam-node-find nil (org-roam-latte--keyword-at-point)))))
 
 (provide 'org-roam-latte)
 
