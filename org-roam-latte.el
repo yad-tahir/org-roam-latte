@@ -148,7 +148,7 @@ in `org-roam-latte--keywords`."
       (when (or force
                 (and (eq o-f 'org-roam-latte-keyword-face)
                      ;; Check if it still points at a valid keyword
-                     (not (gethash keyword org-roam-latte--keywords))))
+                     (not (org-roam-latte--phrase-checker keyword))))
         (delete-overlay o)))))
 
 (defun org-roam-latte--overlay-exists (keyword start end)
@@ -202,7 +202,7 @@ LIMIT determines where the search should stop."
           (setq current-end (point))
           (let ((phrase (downcase
                          (buffer-substring-no-properties start current-end))))
-            (when (gethash phrase org-roam-latte--keywords)
+            (when (org-roam-latte--phrase-checker phrase)
               (setq result (cons start current-end)))))))
     result))
 
@@ -242,8 +242,7 @@ This avoids the performance penalty of iterating through the entire database."
                          (keyword-text (downcase (buffer-substring-no-properties
                                                   (car full-match)
                                                   (cdr full-match))))
-                         (node-name (gethash keyword-text
-                                             org-roam-latte--keywords)))
+                         (node-name (org-roam-latte--phrase-checker keyword-text)))
 
                     ;; If we found a multi-word match, move point there to avoid
                     ;; double-counting
@@ -299,7 +298,7 @@ Used to match pluralized text against singular node titles."
 (defun org-roam-latte--add-keyword (keyword)
   "Add KEYWORD and its plural form to the cache safely."
   (when (and keyword (not (string-blank-p keyword)))
-    (unless (or (gethash keyword org-roam-latte--keywords)
+    (unless (or (org-roam-latte--phrase-checker keyword)
                 (member keyword org-roam-latte-exclude-words))
       (puthash keyword keyword org-roam-latte--keywords)
       (puthash (org-roam-latte--pluralize keyword)
