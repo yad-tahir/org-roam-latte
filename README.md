@@ -33,8 +33,8 @@ Clone the repository and add it to your load path. Then, add hooks to enable it 
 (add-to-list 'load-path "/path/to/org-roam-latte")
 (require 'org-roam-latte)
 
-;; Enable in Org buffers
-(add-hook 'org-mode-hook #'org-roam-latte-mode)
+;; Enable in all Text buffers (including org-mode)
+(add-hook 'text-mode-hook #'org-roam-latte-mode)
 ;; Enable in Programming buffers (highlights comments only)
 (add-hook 'prog-mode-hook #'org-roam-latte-mode)
 ```
@@ -43,7 +43,7 @@ Clone the repository and add it to your load path. Then, add hooks to enable it 
 ```elisp
 (use-package org-roam-latte
   :straight (:host github :repo "yad-tahir/org-roam-latte")
-  :hook ((org-mode . org-roam-latte-mode)
+  :hook ((text-mode . org-roam-latte-mode)
          (prog-mode . org-roam-latte-mode)))
 ```
 
