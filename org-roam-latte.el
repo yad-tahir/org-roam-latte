@@ -163,8 +163,7 @@ in `org-roam-latte--keywords`."
         (if (and (equal (overlay-start co) start)
                  (equal (overlay-end co) end))
             (throw 'org-roam-latte--overlay-found t)
-
-          ;; Region mismatch; e.g. an old overlay that does not
+          ;; Else region mismatch; e.g. an old overlay that does not
           ;; accommodate the extra length. Clean it and continue searching.
           (delete-overlay co)
           nil)))))
