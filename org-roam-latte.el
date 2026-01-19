@@ -99,6 +99,17 @@ See `org-element-all-elements' for a comprehensive list."
   "Face used to highlight unlinked org-roam references (node titles and aliases)."
   :group 'org-roam-latte)
 
+(defcustom org-roam-latte-base-priority 0
+  "Base priority for overlays created by `org-roam-latte'.
+
+The actual priority of a highlight is calculated dynamically as the sum of
+this base value and the length of the matched phrase. This ensures that
+longer, more specific matches are prioritized over shorter ones.
+
+Increase this value to ensure Latte highlights appear above overlays
+from other minor modes; decrease it to render them below."
+  :type 'integer
+  :group 'org-roam-latte)
 
 ;;; Internal variables
 
@@ -266,7 +277,9 @@ This avoids the performance penalty of iterating through the entire database."
                         (overlay-put o 'mouse-face 'highlight)
                         (overlay-put o 'org-roam-latte-keyword node-name)
                         ;; Longer phrases get higher priority
-                        (overlay-put o 'priority 100)))))))))))))
+                        (overlay-put o 'priority
+                                     (+ org-roam-latte-base-priority
+                                        (length keyword-text)))))))))))))))
 
 (defun org-roam-latte--pluralize (phrase)
   "Return the plural form of PHRASE using standard English grammar rules.
