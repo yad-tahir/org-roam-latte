@@ -1,14 +1,14 @@
 ;;; org-roam-latte.el --- Auto-highlight unlinked Org-roam references -*- lexical-binding: t; -*-
 
 ;;  ___
-;; / _ \ _ __ __ _
+;; / _ \  _ __ __ _
 ;; | | | | '__/ _` |
 ;; | |_| | | | (_| |
-;;  \___/|_|  \__, |
+;  \___/ |_|  \__, |
 ;;            |___/
-;;      ____                      _         _    _
-;;     |  _ \ ___   __ _ _ __ ___    | |    __ _| |_| |_ ___
-;;     | |_) / _ \ / _` | '_ ` _ \   | |   / _` | __| __/ _ \
+;;      ____                         _          _   _
+;;     |  _ \ ___   __ _ _ __ ___   | |    __ _| |_| |_ ___
+;;     | |_) / _ \ / _` | '_ ` _ \  | |   / _` | __| __/ _ \
 ;;     |  _ < (_) | (_| | | | | | | | |__| (_| | |_| ||  __/
 ;;     |_| \_\___/ \__,_|_| |_| |_| |_____\__,_|\__|\__\___|
 ;;
@@ -41,6 +41,23 @@
 ;; titles or aliases and highlights them, allowing you to quickly navigate to
 ;; those nodes or convert the text into a formal link.
 ;;
+
+;;; Features:
+;; - Fast: Uses an optimized inverted search strategy. It scans only the VISIBLE
+;; section of a buffer, and checks against a hash table. It stays snappy even
+;; with thousands of nodes.
+;;
+;; - Smart Linking: Highlighted words are navigatable and con be converted
+;; to links easily.
+;;
+;; - Pluralization: Automatically handles pluralization (e.g., a node titled
+;; "Algorithm" will highlight "algorithms" in your text).
+;; Org-roam Alias Support: Recognizes and highlights your node aliases as well.
+;;
+;; - Context Aware: Ignores existing Org links. Intelligent handling of code
+;; blocks (only highlights inside comments).
+;;
+;; - Theme Aware: Adapts colors automatically for Light and Dark themes.
 
 ;;; Code:
 
