@@ -36,11 +36,10 @@
 ;; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ;;; Commentary:
-;; Org-roam Latte is a minor mode that highlights unlinked references to existing
-;; org-roam nodes. It scans your text for words matching existing org-roam node
-;; titles or aliases and highlights them, allowing you to quickly navigate to
-;; those nodes or convert the text into a formal link.
-;;
+;; Org-roam Latte is a minor mode that highlights unlinked references to
+;; existing org-roam nodes. It scans your text for words matching existing
+;; org-roam node titles or aliases and highlights them, allowing you to quickly
+;; navigate to those nodes or convert the text into a formal link.
 
 ;;; Features:
 ;; - Fast: Uses an optimized inverted search strategy. It scans only the VISIBLE
@@ -182,7 +181,8 @@ in `org-roam-latte--keywords`."
 (defun org-roam-latte--highlight-buffer (&optional start end buffer)
   "Highlight keywords in BUFFER between START and END positions.
 
-If BUFFER is nil, use current buffer. If START/END are nil, use the visible window."
+If BUFFER is nil, use current buffer. If START/END are nil, use the visible
+window."
   (setq buffer (or buffer (current-buffer)))
   (with-current-buffer buffer
     (when (bound-and-true-p org-roam-latte-mode)
@@ -214,20 +214,28 @@ This avoids the performance penalty of iterating through the entire database."
               (let* ((word-end (point))
                      ;; Back up to find the start of the word
                      (word-beg (save-excursion (backward-word) (point)))
-                     (candidate (downcase (buffer-substring-no-properties word-beg word-end)))
+                     (candidate (downcase (buffer-substring-no-properties
+                                           word-beg
+                                           word-end)))
                      ;; Check if this word starts a multi-word keyword
-                     (full-match (org-roam-latte--find-longest-match word-beg end)))
+                     (full-match (org-roam-latte--find-longest-match
+                                  word-beg end)))
 
                 (when full-match
                   (let* ((match-beg (car full-match))
                          (match-end (cdr full-match))
-                         (keyword-text (downcase (buffer-substring-no-properties (car full-match) (cdr full-match))))
-                         (node-name (gethash keyword-text org-roam-latte--keywords)))
+                         (keyword-text (downcase (buffer-substring-no-properties
+                                                  (car full-match)
+                                                  (cdr full-match))))
+                         (node-name (gethash keyword-text
+                                             org-roam-latte--keywords)))
 
-                    ;; If we found a multi-word match, move point there to avoid double-counting
+                    ;; If we found a multi-word match, move point there to avoid
+                    ;; double-counting
                     (goto-char match-end)
 
-                    (unless (or (org-roam-latte--overlay-exists keyword-text match-beg match-end)
+                    (unless (or (org-roam-latte--overlay-exists
+                                 keyword-text match-beg match-end)
                                 (and (derived-mode-p 'org-mode)
                                      ;; Avoid highlighting on excluded elements
                                      (memq (org-element-type (org-element-context))
@@ -260,7 +268,8 @@ LIMIT determines where the search should stop."
         (goto-char current-end)
         (when (re-search-forward "\\b\\w+\\b" limit t)
           (setq current-end (point))
-          (let ((phrase (downcase (buffer-substring-no-properties start current-end))))
+          (let ((phrase (downcase
+                         (buffer-substring-no-properties start current-end))))
             (when (gethash phrase org-roam-latte--keywords)
               (setq result (cons start current-end)))))))
     result))
@@ -298,7 +307,9 @@ Used to match pluralized text against singular node titles."
     (unless (or (gethash keyword org-roam-latte--keywords)
                 (member keyword org-roam-latte-exclude-words))
       (puthash keyword keyword org-roam-latte--keywords)
-      (puthash (org-roam-latte--pluralize keyword) keyword org-roam-latte--keywords))))
+      (puthash (org-roam-latte--pluralize keyword)
+               keyword
+               org-roam-latte--keywords))))
 
 (defun org-roam-latte--keyword-at-point ()
   "Return the text of the Latte keyword overlay at point."
@@ -333,7 +344,8 @@ Populates `org-roam-latte--keywords` with titles and aliases."
 BEGINNING sets the starting position of line."
   (save-excursion
     (goto-char beginning)
-    (org-roam-latte--highlight-buffer (line-beginning-position) (line-end-position))))
+    (org-roam-latte--highlight-buffer (line-beginning-position)
+                                      (line-end-position))))
 
 (defun org-roam-latte--after-revert-function (&rest _args)
   "Hook to re-highlight the buffer after a revert event."
@@ -351,7 +363,8 @@ WIN The window object in which the scroll event has occurred."
                           (not (eq org-roam-latte--prev-win win))
                           (> (abs diff)
                              ;; Less than 1/3 of window size
-                             (/ (- org-roam-latte--win-prev-end org-roam-latte--win-prev-start) 3)))))
+                             (/ (- org-roam-latte--win-prev-end
+                                   org-roam-latte--win-prev-start) 3)))))
     (cond
      ((and (>= diff 1) (not full-render))
       (org-roam-latte--highlight-buffer org-roam-latte--win-prev-end end))
@@ -399,19 +412,23 @@ Otherwise, insert at point."
       (when use-region
         (deactivate-mark)))))
 
+;;;###autoload
 (defun org-roam-latte-complete-at-point (&optional point)
   "Convert the highlighted reference at POINT into a formal Org-roam link."
   (interactive)
   (setq point (or point (point)))
   (save-excursion
     (goto-char point)
-    (if-let ((overlay (seq-find (lambda (o) (overlay-get o 'org-roam-latte-keyword))
+    (if-let ((overlay (seq-find (lambda (o)
+                                  (overlay-get o 'org-roam-latte-keyword))
                                 (overlays-at (point)))))
-        (org-roam-latte--node-link-insert (overlay-get overlay 'org-roam-latte-keyword)
-                                          (overlay-start overlay)
-                                          (overlay-end overlay))
+        (org-roam-latte--node-link-insert
+         (overlay-get overlay 'org-roam-latte-keyword)
+         (overlay-start overlay)
+         (overlay-end overlay))
       (message "No org-roam-latte overlay found at point."))))
 
+;;;
 ;;; Minor mode
 ;;;
 
