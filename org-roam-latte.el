@@ -379,10 +379,6 @@ BEGINNING sets the starting position of line."
     (org-roam-latte--highlight-buffer (line-beginning-position)
                                       (line-end-position))))
 
-(defun org-roam-latte--after-revert-function (&rest _args)
-  "Hook to re-highlight the buffer after a revert event."
-  (org-roam-latte--highlight-buffer))
-
 (defun org-roam-latte--scroll-handler (win _start)
   "Handle window scrolling to highlight only the visible region.
 This optimization minimizes the work done during rapid scrolling.
@@ -408,10 +404,6 @@ WIN The window object in which the scroll event has occurred."
     (setq org-roam-latte--win-prev-start start
           org-roam-latte--win-prev-end end
           org-roam-latte--prev-win win)))
-
-(defun org-roam-latte--change-major-mode ()
-  "Cleanup overlays when the major mode change."
-  (org-roam-latte--delete-overlays nil nil t))
 
 ;;
 ;; Public functions
@@ -464,31 +456,27 @@ terms."
   :group 'org-roam-latte
 
   (if org-roam-latte-mode
-      (progn ;; on
+      (progn ;; On
         (add-hook 'window-scroll-functions 'org-roam-latte--scroll-handler t t)
-        (add-hook 'after-revert-hook 'org-roam-latte--after-revert-function t t)
         (add-hook 'after-change-functions 'org-roam-latte--after-change-function t t)
-        (add-hook 'change-major-mode-hook 'org-roam-latte--change-major-mode t t)
 
         (unless org-roam-latte--initialized
+          ;; Globally called once scope
           ;; Hook into Org Roam DB updates to keep keywords fresh
           (advice-add 'org-roam-db-update-file :after #'org-roam-latte--db-modified)
           (advice-add 'org-roam-db-insert-file :after #'org-roam-latte--db-modified)
           (advice-add 'org-roam-db-clear-file :after  #'org-roam-latte--db-modified)
           (advice-add 'org-roam-db-sync :after #'org-roam-latte--db-modified)
-
           (org-roam-latte--db-modified)
           (setq org-roam-latte--initialized t))
 
-        ;; Initial highlight
+        ;; Initial highlighting
         (org-roam-latte--highlight-buffer))
 
-    (progn ;; off
+    (progn ;; Off
       (org-roam-latte--delete-overlays nil nil t)
       (remove-hook 'window-scroll-functions 'org-roam-latte--scroll-handler t)
-      (remove-hook 'after-revert-hook 'org-roam-latte--after-revert-function t)
-      (remove-hook 'after-change-functions 'org-roam-latte--after-change-function t)
-      (remove-hook 'change-major-mode-hook 'org-roam-latte--change-major-mode t)))
+      (remove-hook 'after-change-functions 'org-roam-latte--after-change-function t)))
   t)
 
 (provide 'org-roam-latte)
