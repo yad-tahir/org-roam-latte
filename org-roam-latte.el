@@ -470,9 +470,6 @@ terms."
 
   (if org-roam-latte-mode
       (progn ;; On
-        (add-hook 'window-scroll-functions 'org-roam-latte--scroll-handler t t)
-        (add-hook 'after-change-functions 'org-roam-latte--after-change-function t t)
-
         (unless org-roam-latte--initialized
           ;; Globally called once scope
           ;; Hook into Org Roam DB updates to keep keywords fresh
@@ -483,6 +480,8 @@ terms."
           (org-roam-latte--db-modified)
           (setq org-roam-latte--initialized t))
 
+        (add-hook 'window-scroll-functions 'org-roam-latte--scroll-handler t t)
+        (add-hook 'after-change-functions 'org-roam-latte--after-change-function t t)
         ;; Initial highlighting
         (org-roam-latte--highlight-buffer))
 
@@ -490,7 +489,8 @@ terms."
       (org-roam-latte--delete-overlays nil nil t)
       (remove-hook 'window-scroll-functions 'org-roam-latte--scroll-handler t)
       (remove-hook 'after-change-functions 'org-roam-latte--after-change-function t)))
-  t)
+
+  org-roam-latte-mode)
 
 (provide 'org-roam-latte)
 
