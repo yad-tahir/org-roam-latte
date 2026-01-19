@@ -4,16 +4,14 @@
 
 ## Features
 
-* **Fast:** Uses an optimized inverted search strategy. It scans _only_ the visible section of a buffer, and checks against a hash table. It stays snappy even with thousands of nodes.
-* **Smart Linking:** Highlighted words are nivgatable.
+* **Fast:** Uses an optimized inverted search strategy. It scans only the **visible** section of a buffer, and checks against a hash table. It stays snappy even with thousands of nodes.
+* **Smart Linking:** Highlighted words are navigatable.
     * **Click / RET**: Visit the node.
-    * **M-RET**: Instantly convert the text into a formal org-roam ID link.
+    * **M-RET**: Convert the text into a formal org-roam ID link.
 * **Pluralization:** Automatically handles pluralization (e.g., a node titled "Algorithm" will highlight "algorithms" in your text).
 * **Org-roam Alias Support:** Recognizes and highlights your node aliases as well.
-* **Context Aware:**
-    * Ignores existing Org links.
-    * Intelligent handling of code blocks (only highlights inside comments).
-    * Adapts colors automatically for Light and Dark themes.
+* **Context Aware:** Ignores existing Org links, and intelligent handles code blocks (only highlights inside comments).
+* **Theme Aware:** Adapts colors automatically for _light_ and _dark_ themes.
 
 ## Great Performance
 
