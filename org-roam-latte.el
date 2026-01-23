@@ -331,6 +331,8 @@ Otherwise, insert at point."
          (original-text (when replace-p
                           (org-link-display-format
                            (buffer-substring-no-properties start final))))
+         ;; Remove case sensitivity. Check `org-roam-node-downtitle'
+         (org-roam-node-display-template "${lattedowntitle}")
          ;; We gather all user input BEFORE starting the atomic change group.
          (node (org-roam-node-read keyword nil))
          (description (or original-text
@@ -366,6 +368,12 @@ Otherwise, insert at point."
         (word-at-point)
         "")))
 
+(cl-defmethod org-roam-node-lattedowntitle (node)
+  "A temporary org-roam display template.
+
+Used with the variable `org-roam-node-display-template'."
+
+    (downcase (org-roam-node-title node)))
 ;;
 ;; Hooks and Advisors
 ;;
@@ -443,7 +451,9 @@ WIN The window object in which the scroll event has occurred."
   "Visit the Org-roam node corresponding to the highlighted reference at point."
   (interactive)
   (let* ((context (org-element-context))
-         (type (org-element-type context)))
+         (type (org-element-type context))
+         ;; Remove case sensitivity. Check `org-roam-node-downtitle'
+         (org-roam-node-display-template "${lattedowntitle}"))
     (if (memq type '(link))
         (org-open-at-point)
       (org-roam-node-find nil (org-roam-latte--keyword-at-point)))))
