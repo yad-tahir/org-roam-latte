@@ -444,7 +444,7 @@ WIN The window object in which the scroll event has occurred."
          (overlay-get overlay 'org-roam-latte-keyword)
          (overlay-start overlay)
          (overlay-end overlay))
-      (message "No org-roam-latte overlay found at point."))))
+      (error "No org-roam-latte highlight found at point."))))
 
 ;;;###autoload
 (defun org-roam-latte-open-at-point ()
