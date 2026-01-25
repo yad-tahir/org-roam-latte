@@ -77,7 +77,7 @@ Words in this list will not be highlighted even if they match an Org-roam node."
 (defcustom org-roam-latte-excluded-org-elements '(link node-property keyword)
   "List of Org element types where highlight should not be created.
 
-Common types include 'link, 'node-property, 'keyword, 'code, and 'verbatim.
+Common types include `link', `node-property', `keyword', `code', and `verbatim'.
 See `org-element-all-elements' for a comprehensive list."
   :type '(repeat symbol)
   :group 'org-roam-latte)
@@ -237,16 +237,10 @@ This avoids the performance penalty of iterating through the entire database."
             (goto-char start)
             ;; Search for words/phrases in the buffer
             (while (re-search-forward "\\b\\w+\\b" end t)
-              (let* ((word-end (point))
-                     ;; Back up to find the start of the word
-                     (word-beg (save-excursion (backward-word) (point)))
-                     (candidate (downcase (buffer-substring-no-properties
-                                           word-beg
-                                           word-end)))
+              (let* ((word-beg (save-excursion (backward-word) (point)))
                      ;; Check if this word starts a multi-word keyword
                      (full-match (org-roam-latte--find-longest-match
                                   word-beg end)))
-
                 (when full-match
                   (let* ((match-beg (car full-match))
                          (match-end (cdr full-match))
@@ -371,8 +365,8 @@ Otherwise, insert at point."
 (cl-defmethod org-roam-node-lattedowntitle (node)
   "A temporary org-roam display template.
 
-Used with the variable `org-roam-node-display-template'."
-
+Used with the variable `org-roam-node-display-template' to downcase NODE
+title/alias."
     (downcase (org-roam-node-title node)))
 ;;
 ;; Hooks and Advisors
@@ -444,7 +438,7 @@ WIN The window object in which the scroll event has occurred."
          (overlay-get overlay 'org-roam-latte-keyword)
          (overlay-start overlay)
          (overlay-end overlay))
-      (error "No org-roam-latte highlight found at point."))))
+      (error "No org-roam-latte highlight found at point"))))
 
 ;;;###autoload
 (defun org-roam-latte-open-at-point ()
@@ -490,15 +484,15 @@ terms."
           (org-roam-latte--db-modified)
           (setq org-roam-latte--initialized t))
 
-        (add-hook 'window-scroll-functions 'org-roam-latte--scroll-handler t t)
-        (add-hook 'after-change-functions 'org-roam-latte--after-change-function t t)
+        (add-hook 'window-scroll-functions #'org-roam-latte--scroll-handler t t)
+        (add-hook 'after-change-functions #'org-roam-latte--after-change-function t t)
         ;; Initial highlighting
         (org-roam-latte--highlight-buffer))
 
     (progn ;; Off
       (org-roam-latte--delete-overlays nil nil t)
-      (remove-hook 'window-scroll-functions 'org-roam-latte--scroll-handler t)
-      (remove-hook 'after-change-functions 'org-roam-latte--after-change-function t)))
+      (remove-hook 'window-scroll-functions #'org-roam-latte--scroll-handler t)
+      (remove-hook 'after-change-functions #'org-roam-latte--after-change-function t)))
 
   org-roam-latte-mode)
 
