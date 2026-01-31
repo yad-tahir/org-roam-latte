@@ -15,7 +15,7 @@
 
 ;; Author: Yad Tahir <yad at ieee.org>
 ;; URL: https://github.com/yad-tahir/org-roam-latte
-;; Package-Requires: ((emacs "27.1") (org-roam "2.0"))
+;; Package-Requires: ((emacs "27.1") (org-roam "2.0") (inflections "1.1"))
 ;; Version: 0.6
 ;; Description: Auto-highlight unlinked Org-roam references
 ;; Keywords: hypermedia, outlines, org-roam, convenience
@@ -58,6 +58,7 @@
 
 (require 'org-roam)
 (require 'seq)
+(require 'inflections)
 
 (defgroup org-roam-latte nil
   "A minor mode that automatically highlights unlinked org-roam references."
@@ -276,31 +277,10 @@ This avoids the performance penalty of iterating through the entire database."
                                         (length keyword-text)))))))))))))))
 
 (defun org-roam-latte--pluralize (phrase)
-  "Return the plural form of PHRASE using standard English grammar rules.
+  "Return the plural form of PHRASE using standard grammar rules.
+
 Used to match pluralized text against singular node titles."
-  (let ((case-fold-search t))
-    (cond
-     ;; Common irregulars
-     ((string-equal phrase "child") "children")
-     ((string-equal phrase "person") "people")
-     ((string-equal phrase "man") "men")
-     ((string-equal phrase "woman") "women")
-     ((string-equal phrase "tooth") "teeth")
-     ((string-equal phrase "foot") "feet")
-
-     ;; Words ending in s, x, z, ch, sh
-     ((string-match-p "\\([sxz]\\|ch\\|sh\\)$" phrase)
-      (concat phrase "es"))
-
-     ;; Words ending in consonant + y
-     ((string-match-p "[^aeiou]y$" phrase)
-      (concat (substring phrase 0 -1) "ies"))
-
-     ;; Words ending in f or fe
-     ((string-match-p "\\(li\\|wi\\|lo\\|lea\\|shel\\|thie\\)fe?$" phrase)
-      (replace-regexp-in-string "fe?$" "ves" phrase))
-
-     (t (concat phrase "s")))))
+  (inflection-pluralize-string phrase))
 
 (defun org-roam-latte--add-keyword (keyword)
   "Add KEYWORD and its plural form to the cache safely."
