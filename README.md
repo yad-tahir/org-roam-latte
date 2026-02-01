@@ -60,7 +60,7 @@ When you navigate to a highlighted word (declared in `org-roam-latte-keyword-map
 | Variable | Default | Description |
 | :--- | :--- | :--- |
 | `org-roam-latte-exclude-words` | `'()` | A list of strings to exclude from highlighting. |
-| `org-roam-latte-excluded-org-elements` | `'(link node-property keyword)` | A list of org element types to exclude from highlighting. |
+| `org-roam-latte-exclude-org-elements` | `'(link node-property keyword)` | A list of org element types to exclude from highlighting. |
 | `org-roam-latte-highlight-prog-comments` | `t` | If `t`, Latte will highlight keywords inside comments in programming modes. |
 | `org-roam-latte-base-priority` | `0` | The base priority for highlights, allowing you to control their stacking order relative to overlays from other modes. |
 

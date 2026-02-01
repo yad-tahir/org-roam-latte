@@ -75,7 +75,7 @@ Words in this list will not be highlighted even if they match an Org-roam node."
   :group 'org-roam-latte
   :type '(repeat string))
 
-(defcustom org-roam-latte-excluded-org-elements '(link node-property keyword)
+(defcustom org-roam-latte-exclude-org-elements '(link node-property keyword)
   "List of Org element types where highlight should not be created.
 
 Common types include `link', `node-property', `keyword', `code', and `verbatim'.
@@ -259,7 +259,7 @@ This avoids the performance penalty of iterating through the entire database."
                                 (and (derived-mode-p 'org-mode)
                                      ;; Avoid highlighting on excluded elements
                                      (memq (org-element-type (org-element-context))
-                                           org-roam-latte-excluded-org-elements))
+                                           org-roam-latte-exclude-org-elements))
                                 ;; Handle prog-mode comments logic
                                 (and org-roam-latte-highlight-prog-comments
                                      (derived-mode-p 'prog-mode)
