@@ -1,5 +1,7 @@
 # ☕ Org-roam Latte
 
+[![Emacs](https://img.shields.io/badge/editor-emacs-7F5AB6.svg?logo=gnu-emacs&logoColor=white)](https://www.gnu.org/software/emacs/) [![MELPA](https://melpa.org/packages/org-roam-latte-badge.svg)](https://melpa.org/#/org-roam-latte)
+
 **Org-roam Latte** is a minor mode that automatically highlights **unlinked org-roam references** in your buffer. It scans your current text and identifies words or phrases that match existing org-roam nodes (titles and aliases). It brings the "Unlinked Mentions" feature found in tools like Obsidian or Roam Research directly into Emacs, helping you discover connections you might have missed.
 
 ## Features
@@ -39,10 +41,9 @@ Clone the repository and add it to your load path. Then, add hooks to enable it 
 (add-hook 'prog-mode-hook #'org-roam-latte-mode)
 ```
 
-### Use-package
+### Use-package with [Melpa](https://github.com/melpa/melpa)
 ```elisp
 (use-package org-roam-latte
-  :straight (:host github :repo "yad-tahir/org-roam-latte")
   :hook ((text-mode . org-roam-latte-mode)
          (prog-mode . org-roam-latte-mode)))
 ```
