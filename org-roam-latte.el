@@ -347,7 +347,7 @@ Otherwise, insert at point."
 
 Used with the variable `org-roam-node-display-template' to downcase NODE
 title/alias."
-    (downcase (org-roam-node-title node)))
+  (downcase (org-roam-node-title node)))
 ;;
 ;; Hooks and Advisors
 ;;
