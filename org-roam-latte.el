@@ -122,8 +122,9 @@ from other minor modes; decrease it to render them below."
 (defvar org-roam-latte--keywords (make-hash-table :test 'equal)
   "Hash table containing all known Org-roam node titles and aliases.
 
-This structure is updated via `org-roam-latte--db-modified` hooks.
-Keys include the downcased title, aliases, and their pluralized forms.")
+This structure is updated via `org-roam-latte--db-modified` hooks. A key are
+keywords derived from the downcased title, aliases, and their pluralized forms.
+A value is a downcase string of title/alias attached to that keyword.")
 
 (defvar org-roam-latte--initialized nil
   "Non-nil if Org-roam-latte hooks and advice have been initialized.")
