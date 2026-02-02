@@ -61,8 +61,8 @@ When you navigate to a highlighted word (declared in `org-roam-latte-keyword-map
 | :--- | :--- | :--- |
 | `org-roam-latte-exclude-words` | `'()` | A list of strings to exclude from highlighting. |
 | `org-roam-latte-exclude-org-elements` | `'(link node-property keyword)` | A list of org element types to exclude from highlighting. |
-| `org-roam-latte-exclude-current-node` | `t` | When non-nil, disable highlighting for title/aliases defined by the current node. |
-| `org-roam-latte-highlight-prog-comments` | `t` | If `t`, Latte will highlight keywords inside comments in programming modes. |
+| `org-roam-latte-exclude-scope` | `'node` | Filters out keywords linking to the current context: nil (highlight all), 'node (exclude title/aliases defined by current node), or 'parents (exclude current node and its ancestors). |
+| `org-roam-latte-highlight-prog-comments` | `t` | If `t`, Latte highlights keywords inside comments in programming modes. |
 | `org-roam-latte-base-priority` | `0` | The base priority for highlights, allowing you to control their stacking order relative to overlays from other modes. |
 
 ### Theming
