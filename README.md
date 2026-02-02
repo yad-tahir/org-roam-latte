@@ -6,7 +6,7 @@
 
 ## Features
 
-* **Fast:** Uses an optimized inverted search strategy. It scans only the **visible** section of a buffer, and checks against a hash table. It stays snappy even with thousands of nodes.
+* **Fast:** Scans only the **visible** section of a buffer, and checks against a hash table. It stays snappy even with thousands of nodes.
 * **Smart Linking:** Highlighted words are navigatable.
     * **Click / RET**: Visit the node.
     * **M-RET**: Convert the text into a formal org-roam ID link.
