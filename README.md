@@ -61,9 +61,37 @@ When you navigate to a highlighted word (declared in `org-roam-latte-keyword-map
 | :--- | :--- | :--- |
 | `org-roam-latte-exclude-words` | `'()` | A list of strings to exclude from highlighting. |
 | `org-roam-latte-exclude-org-elements` | `'(link node-property keyword)` | A list of org element types to exclude from highlighting. |
-| `org-roam-latte-exclude-scope` | `'node` | Filters out keywords linking to the current context: nil (highlight all), 'node (exclude title/aliases defined by current node), or 'parents (exclude current node and its ancestors). |
+| `org-roam-latte-exclude-scope` | `'node` | Filters out keywords linking to the current context: nil (highlight all), 'node (exclude title/aliases defined by current node), or 'parents (exclude current node and its ancestors) - See 'Self-Referencing Exclusion' section. |
 | `org-roam-latte-highlight-prog-comments` | `t` | If `t`, Latte highlights keywords inside comments in programming modes. |
 | `org-roam-latte-base-priority` | `0` | The base priority for highlights, allowing you to control their stacking order relative to overlays from other modes. |
+
+### Self-Referencing Exclusion
+By default, `org-roam-latte` prevents a node from highlighting its own title or aliases within its own body text. You can control how strict this *self-referencing* filter is using the `org-roam-latte-exclude-scope` variable. To explain this further, consider the following example:
+
+Imagine your Org file looks like this.
+
+```text
+* Solar System                 <-- Org-roam Note 1 /(Parent Node)
+  :PROPERTIES: ... :END:
+   
+  ** Mars                      <-- Org-roam Note 2
+     :PROPERTIES: ... :END:
+      
+     "I am studying the Solar System while standing on Mars."
+                        ^                              ^
+                        |                              |
+                   Matches Parent                 Matches Current
+```
+
+Adjusting `org-roam-latte-exclude-scope` gives:
+
+| Setting | Behavior | Resulting Text Highlighting |
+| :--- | :--- | :--- |
+| **`nil`** | **Highlight Everything.** <br>All self references are allowed. | "I am studying the `[[Solar System]]` while standing on `[[Mars]]`." |
+| **`'node`** | **Exclude Current** (Default). <br>Ignores the title and aliases defined by Mars. | "I am studying the `[[Solar System]]` while standing on Mars." |
+| **`'parents`** | **Exclude Ancestors.** <br>Ignores the title/aliases defined by both Mars and its parents (only one in our case, Solar System). | "I am studying the Solar System while standing on Mars." |
+
+**Note:** The `'parents` option requires *traversing* the document structure upwards for every match. While effective, it may be slow in **very large** Org files.
 
 ### Theming
 The highlighting face is `org-roam-latte-keyword-face`. It defaults to **Purple** (Light Mode) or **Cyan** (Dark Mode) with a wavy underline. You can customize this in your config, e.g.:
