@@ -205,22 +205,22 @@ window."
           (org-roam-latte--make-overlays buffer b-start b-end))))))
 
 (defun org-roam-latte--match-highlightable (keyword)
-  (if (not org-roam-latte-exclude-current-node)
-      t
-    (let ((current-node (org-roam-node-at-point)))
-      (if (not current-node)
-          t
-        (let* ((current-id (org-roam-node-id current-node))
-               ;; Use 'like' for easier case-insensitivity
-               (ids (org-roam-db-query
-                     [:select [id] :from nodes :where (= title $s1)
-                      :union
-                      :select [node_id] :from aliases :where (= alias $s1)]
-                     keyword))
-               ;; org-roam-db-query returns a list of lists: (("id1") ("id2"))
-               ;; We must wrap current-id in a list to match that structure
-               (is-member (member (list current-id) ids)))
-          (not is-member))))))
+  "Return non-nil if KEYWORD is suitable for highlighting in the current context.
+
+This function respects `org-roam-latte-exclude-current-node`. If that variable
+is non-nil, it checks if the node at point is included in the list of nodes
+associated with KEYWORD (stored in the 'nodes text property)."
+
+  (if (and org-roam-latte-exclude-current-node
+           ;; We need to check of this is org-mode. Otherwise,
+           ;; `org-roam-node-at-point' will through exception
+           (derived-mode-p 'org-mode))
+      (let ((current-node (org-roam-node-at-point))
+            (nodes (get-text-property 0 'nodes keyword)))
+        (and current-node
+             nodes
+             (not (member current-node nodes))))
+    t))
 
 (defun org-roam-latte--find-longest-match (start limit)
   "Look ahead from START to find the longest phrase existing in the DB.
@@ -237,8 +237,8 @@ LIMIT determines where the search should stop."
         (when (re-search-forward "\\b\\w+\\b" limit t)
           (setq current-end (point))
           (let* ((phrase (downcase
-                         (buffer-substring-no-properties start current-end)))
-                (keyword (org-roam-latte--phrase-checker phrase)))
+                          (buffer-substring-no-properties start current-end)))
+                 (keyword (org-roam-latte--phrase-checker phrase)))
             (when (and keyword
                        (org-roam-latte--match-highlightable keyword))
               (setq result (cons start current-end)))))))
@@ -275,7 +275,8 @@ This avoids the performance penalty of iterating through the entire database."
                                                   (car full-match)
                                                   (cdr full-match))))
                          (node-name (downcase
-                                     (org-roam-latte--phrase-checker keyword-text))))
+                                     (substring-no-properties
+                                     (org-roam-latte--phrase-checker keyword-text)))))
 
                     ;; If we found a multi-word match, move point there to avoid
                     ;; double-counting
@@ -309,15 +310,26 @@ This avoids the performance penalty of iterating through the entire database."
 Used to match pluralized text against singular node titles."
   (inflection-pluralize-string phrase))
 
-(defun org-roam-latte--add-keyword (keyword)
-  "Add KEYWORD and its plural form to the cache safely."
+(defun org-roam-latte--add-keyword (keyword node)
+  "Add KEYWORD and NODE and its plural form to the `org-roam-latte--keywords'.
+
+Stores NODE in a list as a text property 'nodes on the KEYWORD string."
   (when (and keyword (not (string-blank-p keyword)))
-    (unless (or (org-roam-latte--phrase-checker keyword)
-                (member keyword org-roam-latte-exclude-words))
-      (puthash (downcase keyword) keyword org-roam-latte--keywords)
-      (puthash (downcase (org-roam-latte--pluralize keyword))
-               keyword
-               org-roam-latte--keywords))))
+    (unless (member keyword org-roam-latte-exclude-words)
+      (let* ((key (downcase keyword))
+             (value (or (gethash key org-roam-latte--keywords)
+                        key))
+             (nodes (get-text-property 0 'nodes value)))
+
+        (unless (member node nodes)
+          (setq nodes (cons node nodes)))
+        (put-text-property 0 (length value) 'nodes nodes value)
+
+        ;; Store the string object (carrying the property) in the hash map
+        (puthash key value org-roam-latte--keywords)
+        (puthash (downcase (org-roam-latte--pluralize key))
+                 value
+                 org-roam-latte--keywords)))))
 
 (defun org-roam-latte--node-link-insert (keyword &optional beg end)
   "Convert KEYWORD into an Org-Roam node link using atomic change groups.
@@ -386,9 +398,9 @@ Populates `org-roam-latte--keywords` with titles and aliases."
   (dolist (node (org-roam-node-list))
     (let ((title (org-roam-node-title node))
           (aliases (org-roam-node-aliases node)))
-      (org-roam-latte--add-keyword title)
+      (org-roam-latte--add-keyword title node)
       (dolist (alias aliases)
-        (org-roam-latte--add-keyword alias))))
+        (org-roam-latte--add-keyword alias node))))
   (org-roam-latte--highlight-buffers)
   t)
 
