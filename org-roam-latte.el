@@ -74,6 +74,27 @@ Words in this list will not be highlighted even if they match an Org-roam node."
   :group 'org-roam-latte
   :type '(repeat string))
 
+(defcustom org-roam-latte-exclude-scope 'node
+  "Determine the scope for excluding keywords from highlighting.
+
+This controls where the highlighter should stop if the keyword matches the
+current context.
+
+- nil      : Do not exclude anything (Highlight everywhere).
+- 'node    : Do not highlight keywords that link to the current node.
+- 'parents : Do not highlight keywords that link to the current node,
+             or any of its parent headings (ancestors).
+
+WARNING: The 'parents option requires traversing the document structure
+upwards for every potential match. This has naturally slow performance
+and is NOT recommended for use in large Org files."
+
+  :group 'org-roam-latte
+  :type '(choice
+          (const :tag "Highlight everywhere (No exclusion)" nil)
+          (const :tag "Exclude current node only" node)
+          (const :tag "Exclude current node and parents" parents)))
+
 (defcustom org-roam-latte-exclude-org-elements '(link node-property keyword)
   "List of Org element types where highlight should not be created.
 
@@ -81,11 +102,6 @@ Common types include `link', `node-property', `keyword', `code', and `verbatim'.
 See `org-element-all-elements' for a comprehensive list."
   :type '(repeat symbol)
   :group 'org-roam-latte)
-
-(defcustom org-roam-latte-exclude-current-node t
-  "When non-nil, disable highlighting for current node title/aliases."
-  :group 'org-roam-latte
-  :type 'boolean)
 
 (defvar org-roam-latte-keyword-map
   (let ((map (make-sparse-keymap)))
@@ -206,20 +222,36 @@ window."
 (defun org-roam-latte--match-highlightable (keyword)
   "Return non-nil if KEYWORD is suitable for highlighting in the current context.
 
-This function respects `org-roam-latte-exclude-current-node`. If that variable
-is non-nil, it checks if the node at point is included in the list of nodes
-associated with KEYWORD (stored in the 'nodes text property)."
+This function determines if a KEYWORD should be highlighted by checking if the
+current Org Roam node (or its ancestors) is among the KEYWORD's associated nodes.
+This prevents self-referencing highlights (e.g., highlighting a link to 'Note A'
+while inside 'Note A').
 
-  (if (and org-roam-latte-exclude-current-node
-           ;; We need to check of this is org-mode. Otherwise,
-           ;; `org-roam-node-at-point' will through exception
-           (derived-mode-p 'org-mode))
-      (let ((current-node (org-roam-node-at-point))
-            (nodes (get-text-property 0 'nodes keyword)))
-        (and current-node
-             nodes
-             (not (member current-node nodes))))
-    t))
+The behavior is controlled by `org-roam-latte-exclude-scope'"
+
+  ;; Nil mode
+  (if (or (null org-roam-latte-exclude-scope)
+          (not (derived-mode-p 'org-mode)))
+      t ;; Default: Allow highlighting if we aren't checking exclusions
+    (let ((nodes (get-text-property 0 'nodes keyword))
+          (current-node (org-roam-node-at-point))
+          (should-highlight t)) ;; Default to true
+      (if (eq org-roam-latte-exclude-scope 'node)
+          ;; Node mode
+          (setq should-highlight
+                (and current-node
+                     nodes
+                     (not (member current-node nodes))))
+        ;; Parents mode - Go through ancestors starting at POINT
+        (let ((ancestors (org-element-lineage (org-element-at-point))))
+          (save-excursion
+            (dolist (parent ancestors)
+              (when should-highlight
+                (goto-char (org-element-property :begin parent))
+                (let ((current-node (org-roam-node-at-point)))
+                  (when (member current-node nodes)
+                    (setq should-highlight nil))))))))
+      should-highlight)))
 
 (defun org-roam-latte--find-longest-match (start limit)
   "Look ahead from START to find the longest phrase existing in the DB.
