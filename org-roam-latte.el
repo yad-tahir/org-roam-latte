@@ -274,9 +274,8 @@ This avoids the performance penalty of iterating through the entire database."
                          (keyword-text (downcase (buffer-substring-no-properties
                                                   (car full-match)
                                                   (cdr full-match))))
-                         (node-name (downcase
-                                     (substring-no-properties
-                                     (org-roam-latte--phrase-checker keyword-text)))))
+                         (node-name (substring-no-properties
+                                     (org-roam-latte--phrase-checker keyword-text))))
 
                     ;; If we found a multi-word match, move point there to avoid
                     ;; double-counting
