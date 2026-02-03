@@ -162,43 +162,51 @@ This is used by `org-roam-latte--scroll-handler'")
 ;;; Helpers
 ;;;
 
+(defun org-roam-latte--overlay-to-keyword (overlay)
+  "Covert OVERLAY to keyword.
+
+Return nil if the overlay cannot be converted."
+  (when overlay
+    (let ((key (overlay-get overlay 'org-roam-latte-key)))
+      (org-roam-latte--phrase-to-keyword key))))
+
 (defun org-roam-latte--delete-overlays (&optional start end force)
   "Delete Latte overlays between START and END.
 
 If FORCE is non-nil, delete overlays immediately.
 If FORCE is nil, only delete overlays that no longer match a valid keyword
-in `org-roam-latte--keywords`."
+in `org-roam-latte--keywords'."
   (setq start (or start (point-min))
         end (or end (point-max)))
-
-  (dolist (o (overlays-in start end))
-    (let* ((o-f (overlay-get o 'face))
-           ;; Optimization: Only grab substring if we suspect it's our overlay
-           (keyword (when (eq o-f 'org-roam-latte-keyword-face)
-                      (downcase (buffer-substring-no-properties
-                                 (overlay-start o) (overlay-end o))))))
-      (when (or force
-                (and (eq o-f 'org-roam-latte-keyword-face)
-                     ;; Check if it still points at a valid keyword
-                     (not (org-roam-latte--phrase-checker keyword))))
-        (delete-overlay o)))))
+  (dolist (overlay (overlays-in start end))
+    (let* ((key (overlay-get overlay 'org-roam-latte-key)))
+      (when key
+        (delete-overlay overlay)))))
 
 (defun org-roam-latte--overlay-exists (keyword start end)
   "Return t if an overlay for KEYWORD already exists between START and END."
   (catch 'org-roam-latte--overlay-found
-    (dolist (co (overlays-in start end))
-      (when (equal keyword (overlay-get co 'org-roam-latte-keyword))
-        (if (and (equal (overlay-start co) start)
-                 (equal (overlay-end co) end))
-            (throw 'org-roam-latte--overlay-found t)
-          ;; Else region mismatch; e.g. an old overlay that does not
-          ;; accommodate the extra length. Clean it and continue searching.
-          (delete-overlay co)
-          nil)))))
+    (dolist (overlay (overlays-in start end))
+    ;; Check if object/properties
+    (if (and (equal keyword (org-roam-latte--overlay-to-keyword overlay))
+             (equal (overlay-start overlay) start)
+             (equal (overlay-end overlay) end))
+        (throw 'org-roam-latte--overlay-found t)
+      ;; Else:
+      ;; 1- Region mismatch; e.g. an old overlay that does not
+      ;; accommodate the extra length. Clean it and continue searching.
+      ;; 2- keyword mismatch.
+      (delete-overlay overlay))
+    nil)))
 
-(defun org-roam-latte--phrase-checker (phrase)
-  "Return t if PHRASE is a known keyword in the database."
-  (gethash phrase org-roam-latte--keywords))
+(defun org-roam-latte--phrase-to-keyword (phrase)
+  "Return keyword if PHRASE is a known keyword in org-roam.
+
+Otherwise, nil."
+  (when (and phrase
+             (stringp phrase))
+    (setq pharse (downcase (substring-no-properties phrase)))
+    (gethash phrase org-roam-latte--keywords)))
 
 (defun org-roam-latte--highlight-buffers ()
   "Trigger highlighting for all buffers where the mode is active."
@@ -266,7 +274,7 @@ LIMIT determines where the search should stop."
           (setq current-end (point))
           (let* ((phrase (downcase
                           (buffer-substring-no-properties start current-end)))
-                 (keyword (org-roam-latte--phrase-checker phrase)))
+                 (keyword (org-roam-latte--phrase-to-keyword phrase)))
             (when (and keyword
                        (org-roam-latte--match-highlightable keyword))
               (setq result (cons start current-end)))))))
@@ -299,18 +307,17 @@ This avoids the performance penalty of iterating through the entire database."
                 (when full-match
                   (let* ((match-beg (car full-match))
                          (match-end (cdr full-match))
-                         (keyword-text (downcase (buffer-substring-no-properties
-                                                  (car full-match)
-                                                  (cdr full-match))))
-                         (node-name (substring-no-properties
-                                     (org-roam-latte--phrase-checker keyword-text))))
+                         (phrase-text (downcase (buffer-substring-no-properties
+                                                 (car full-match)
+                                                 (cdr full-match))))
+                         (keyword (org-roam-latte--phrase-to-keyword phrase-text)))
 
                     ;; If we found a multi-word match, move point there to avoid
                     ;; double-counting
                     (goto-char match-end)
 
                     (unless (or (org-roam-latte--overlay-exists
-                                 keyword-text match-beg match-end)
+                                 keyword match-beg match-end)
                                 (and (derived-mode-p 'org-mode)
                                      ;; Avoid highlighting on excluded elements
                                      (memq (org-element-type (org-element-context))
@@ -325,11 +332,17 @@ This avoids the performance penalty of iterating through the entire database."
                         (overlay-put o 'evaporate t)
                         (overlay-put o 'keymap org-roam-latte-keyword-map)
                         (overlay-put o 'mouse-face 'highlight)
-                        (overlay-put o 'org-roam-latte-keyword node-name)
+                        ;; To avoid cache inconsistency, we attach the key
+                        ;; instead of the keyword. This will also reduce the
+                        ;; memory load on Emacs. Other functions should use
+                        ;; `org-roam-latte--overlay-to-keyword' to get the
+                        ;; keyword
+                        (overlay-put o 'org-roam-latte-key
+                                     (substring-no-properties keyword))
                         ;; Longer phrases get higher priority
                         (overlay-put o 'priority
                                      (+ org-roam-latte-base-priority
-                                        (length keyword-text)))))))))))))))
+                                        (length phrase-text)))))))))))))))
 
 (defun org-roam-latte--pluralize (phrase)
   "Return the plural form of PHRASE using standard grammar rules.
@@ -337,13 +350,13 @@ This avoids the performance penalty of iterating through the entire database."
 Used to match pluralized text against singular node titles."
   (inflection-pluralize-string phrase))
 
-(defun org-roam-latte--add-keyword (keyword node)
-  "Add KEYWORD and NODE and its plural form to the `org-roam-latte--keywords'.
+(defun org-roam-latte--add-keyword (phrase node)
+  "Add PHRASE and its plural form as keywords to the `org-roam-latte--keywords'.
 
 Stores NODE in a list as a text property 'nodes on the KEYWORD string."
-  (when (and keyword (not (string-blank-p keyword)))
-    (unless (member keyword org-roam-latte-exclude-words)
-      (let* ((key (downcase keyword))
+  (when (and phrase (not (string-blank-p phrase)))
+    (unless (member phrase org-roam-latte-exclude-words)
+      (let* ((key (downcase phrase))
              (value (or (gethash key org-roam-latte--keywords)
                         key))
              (nodes (get-text-property 0 'nodes value)))
@@ -359,7 +372,7 @@ Stores NODE in a list as a text property 'nodes on the KEYWORD string."
                  org-roam-latte--keywords)))))
 
 (defun org-roam-latte--node-link-insert (keyword &optional beg end)
-  "Convert KEYWORD into an Org-Roam node link using atomic change groups.
+  "Convert KEYWORD into an Org-Roam node link.
 
 If BEG and END are provided, replace the text in that range.
 If not, but the region is active, replace the active region.
@@ -374,7 +387,7 @@ Otherwise, insert at point."
          ;; Remove case sensitivity. Check `org-roam-node-downtitle'
          (org-roam-node-display-template "${lattedowntitle}")
          ;; We gather all user input BEFORE starting the atomic change group.
-         (node (org-roam-node-read keyword nil))
+         (node (org-roam-node-read (substring-no-properties keyword) nil))
          (description (or original-text
                           (org-roam-node-formatted node))))
 
@@ -395,18 +408,13 @@ Otherwise, insert at point."
         (deactivate-mark)))))
 
 (defun org-roam-latte--keyword-at-point ()
-  "Return the text of the Latte keyword overlay at point."
-  (let ((p (overlays-at (point) t))
-        (lk nil))
+  "Return highlighted keyword at POINT. Otherwise, nil."
+  (let ((overlays (overlays-at (point) t))) ;; t for needed sorting
     (catch 'org-roam-latte--found
-      (dolist (o p)
-        (when-let ((k (overlay-get o 'org-roam-latte-keyword)))
-          (throw 'org-roam-latte--found (setq lk k)))))
-    (or lk
-        (when (use-region-p)
-          (buffer-substring-no-properties (region-beginning) (region-end)))
-        (word-at-point)
-        "")))
+      (dolist (o overlays)
+        (when-let ((k (org-roam-latte--overlay-to-keyword o)))
+          (throw 'org-roam-latte--found k)))
+      (throw 'org-roam-latte--found nil))))
 
 (cl-defmethod org-roam-node-lattedowntitle (node)
   "A temporary org-roam display template.
@@ -477,11 +485,12 @@ WIN The window object in which the scroll event has occurred."
   (setq point (or point (point)))
   (save-excursion
     (goto-char point)
-    (if-let ((overlay (seq-find (lambda (o)
-                                  (overlay-get o 'org-roam-latte-keyword))
-                                (overlays-at (point)))))
+    (if-let ((overlay
+              (seq-find (lambda (o)
+                          (org-roam-latte--overlay-to-keyword o))
+                        (overlays-at (point) t))))
         (org-roam-latte--node-link-insert
-         (overlay-get overlay 'org-roam-latte-keyword)
+         (org-roam-latte--overlay-to-keyword overlay)
          (overlay-start overlay)
          (overlay-end overlay))
       (error "No org-roam-latte highlight found at point"))))
@@ -491,8 +500,10 @@ WIN The window object in which the scroll event has occurred."
   "Visit the Org-roam node corresponding to the highlighted reference at point."
   (interactive)
   (let (;; Remove case sensitivity. Check `org-roam-node-downtitle'
-         (org-roam-node-display-template "${lattedowntitle}"))
-      (org-roam-node-find nil (org-roam-latte--keyword-at-point))))
+        (org-roam-node-display-template "${lattedowntitle}"))
+    (org-roam-node-find
+     nil
+     (substring-no-properties (org-roam-latte--keyword-at-point)))))
 
 ;;;
 ;;; Minor mode
@@ -532,7 +543,7 @@ terms."
         (org-roam-latte--highlight-buffer))
 
     (progn ;; Off
-      (org-roam-latte--delete-overlays nil nil t)
+      (org-roam-latte--delete-overlays nil nil)
       (remove-hook 'window-scroll-functions #'org-roam-latte--scroll-handler t)
       (remove-hook 'after-change-functions #'org-roam-latte--after-change-function t)))
 
