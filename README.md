@@ -7,12 +7,12 @@
 ## Features
 
 * **Fast:** Scans only the **visible** section of a buffer, and checks against a hash table. It stays snappy even with thousands of nodes.
+* **Instant:** Automatically highlights keywords as you type, instantly surfacing potential links.
 * **Smart Linking:** Highlighted words are navigatable.
     * **Click / RET**: Visit the node.
     * **M-RET**: Convert the text into a formal org-roam ID link.
 * **Pluralization:** Automatically handles pluralization (e.g., a node titled "Algorithm" will highlight "algorithms" in your text).
-* **Org-roam Alias Support:** Recognizes and highlights your node aliases as well.
-* **Context Aware:** Ignores existing Org links, and intelligent handles code blocks (only highlights inside comments).
+* **Context Aware:** Ignores existing Org links and node self-referencing. It intelligent handles code blocks (only highlights inside comments).
 * **Theme Aware:** Adapts colors automatically for _light_ and _dark_ themes.
 
 ## Great Performance
