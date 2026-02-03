@@ -493,13 +493,9 @@ WIN The window object in which the scroll event has occurred."
 (defun org-roam-latte-open-at-point ()
   "Visit the Org-roam node corresponding to the highlighted reference at point."
   (interactive)
-  (let* ((context (org-element-context))
-         (type (org-element-type context))
-         ;; Remove case sensitivity. Check `org-roam-node-downtitle'
+  (let (;; Remove case sensitivity. Check `org-roam-node-downtitle'
          (org-roam-node-display-template "${lattedowntitle}"))
-    (if (memq type '(link))
-        (org-open-at-point)
-      (org-roam-node-find nil (org-roam-latte--keyword-at-point)))))
+      (org-roam-node-find nil (org-roam-latte--keyword-at-point))))
 
 ;;;
 ;;; Minor mode
