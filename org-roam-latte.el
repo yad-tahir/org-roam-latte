@@ -170,12 +170,11 @@ Return nil if the overlay cannot be converted."
     (let ((key (overlay-get overlay 'org-roam-latte-key)))
       (org-roam-latte--phrase-to-keyword key))))
 
-(defun org-roam-latte--delete-overlays (&optional start end force)
-  "Delete Latte overlays between START and END.
+(defun org-roam-latte--delete-overlays (&optional start end)
+  "Delete Latte overlays in region defined by START and END.
 
-If FORCE is non-nil, delete overlays immediately.
-If FORCE is nil, only delete overlays that no longer match a valid keyword
-in `org-roam-latte--keywords'."
+If START is nil, then `(point-min)' will be used.
+If END is nil, then `(point-max)' will be used."
   (setq start (or start (point-min))
         end (or end (point-max)))
   (dolist (overlay (overlays-in start end))
@@ -543,7 +542,7 @@ terms."
         (org-roam-latte--highlight-buffer))
 
     (progn ;; Off
-      (org-roam-latte--delete-overlays nil nil)
+      (org-roam-latte--delete-overlays)
       (remove-hook 'window-scroll-functions #'org-roam-latte--scroll-handler t)
       (remove-hook 'after-change-functions #'org-roam-latte--after-change-function t)))
 
