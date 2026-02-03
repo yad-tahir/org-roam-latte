@@ -359,9 +359,11 @@ Stores NODE in a list as a text property 'nodes on the KEYWORD string."
              (value (or (gethash key org-roam-latte--keywords)
                         key))
              (nodes (get-text-property 0 'nodes value)))
-
-        (unless (member node nodes)
-          (setq nodes (cons node nodes)))
+        ;; Compare by ID
+        (unless (cl-member (org-roam-node-id node) nodes
+                           :key #'org-roam-node-id
+                           :test #'string=)
+          (push node nodes))
         (put-text-property 0 (length value) 'nodes nodes value)
 
         ;; Store the string object (carrying the property) in the hash map
