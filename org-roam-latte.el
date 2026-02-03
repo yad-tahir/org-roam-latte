@@ -533,6 +533,7 @@ terms."
           (advice-add 'org-roam-db-insert-file :after #'org-roam-latte--db-modified)
           (advice-add 'org-roam-db-clear-file :after  #'org-roam-latte--db-modified)
           (advice-add 'org-roam-db-sync :after #'org-roam-latte--db-modified)
+          ;; Populate the hash table
           (org-roam-latte--db-modified)
           (setq org-roam-latte--initialized t))
 
