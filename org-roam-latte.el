@@ -88,7 +88,6 @@ current context.
 WARNING: The 'parents option requires traversing the document structure
 upwards for every potential match. This has naturally slow performance
 and is NOT recommended for use in large Org files."
-
   :group 'org-roam-latte
   :type '(choice
           (const :tag "Highlight everywhere (No exclusion)" nil)
@@ -228,7 +227,6 @@ This prevents self-referencing highlights (e.g., highlighting a link to 'Note A'
 while inside 'Note A').
 
 The behavior is controlled by `org-roam-latte-exclude-scope'"
-
   ;; Nil mode
   (if (or (null org-roam-latte-exclude-scope)
           (not (derived-mode-p 'org-mode)))
@@ -258,7 +256,6 @@ The behavior is controlled by `org-roam-latte-exclude-scope'"
 Returns a cons cell (start . end) of the match, or nil.
 
 LIMIT determines where the search should stop."
-
   (let ((result nil)
         (current-end start))
     ;; Optimistically check up to 6 words ahead for multi-word titles.
