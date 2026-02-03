@@ -55,9 +55,10 @@
 
 ;;; Code:
 
+(require 'cl-lib)
+(require 'inflections)
 (require 'org-roam)
 (require 'seq)
-(require 'inflections)
 
 (defgroup org-roam-latte nil
   "A minor mode that automatically highlights unlinked org-roam references."
@@ -385,10 +386,11 @@ Otherwise, insert at point."
          (original-text (when replace-p
                           (org-link-display-format
                            (buffer-substring-no-properties start final))))
-         ;; Remove case sensitivity. Check `org-roam-node-downtitle'
-         (org-roam-node-display-template "${lattedowntitle}")
          ;; We gather all user input BEFORE starting the atomic change group.
-         (node (org-roam-node-read (substring-no-properties keyword) nil))
+         (keyword-nodes (get-text-property 0 'nodes keyword))
+         (node (if (eq (length keyword-nodes) 1)
+                   (car keyword-nodes)
+                 (org-roam-node-read nil 'org-roam-latte--completation-filter)))
          (description (or original-text
                           (org-roam-node-formatted node))))
 
@@ -417,12 +419,6 @@ Otherwise, insert at point."
           (throw 'org-roam-latte--found k)))
       (throw 'org-roam-latte--found nil))))
 
-(cl-defmethod org-roam-node-lattedowntitle (node)
-  "A temporary org-roam display template.
-
-Used with the variable `org-roam-node-display-template' to downcase NODE
-title/alias."
-  (downcase (org-roam-node-title node)))
 ;;
 ;; Hooks and Advisors
 ;;
@@ -475,6 +471,11 @@ WIN The window object in which the scroll event has occurred."
           org-roam-latte--win-prev-end end
           org-roam-latte--prev-win win)))
 
+(defun org-roam-latte--completation-filter (node)
+  (let* ((keyword (org-roam-latte--keyword-at-point))
+         (nodes (get-text-property 0 'nodes keyword)))
+    (when nodes
+      (member node nodes))))
 ;;
 ;; Public functions
 ;;
@@ -500,11 +501,13 @@ WIN The window object in which the scroll event has occurred."
 (defun org-roam-latte-open-at-point ()
   "Visit the Org-roam node corresponding to the highlighted reference at point."
   (interactive)
-  (let (;; Remove case sensitivity. Check `org-roam-node-downtitle'
-        (org-roam-node-display-template "${lattedowntitle}"))
-    (org-roam-node-find
-     nil
-     (substring-no-properties (org-roam-latte--keyword-at-point)))))
+  (let* ((keyword (org-roam-latte--keyword-at-point))
+         (nodes (get-text-property 0 'nodes keyword)))
+    (if (eq (length nodes) 1)
+        (org-roam-node-visit (car nodes))
+      (progn
+        (org-roam-node-find nil nil
+                            'org-roam-latte--completation-filter)))))
 
 ;;;
 ;;; Minor mode
