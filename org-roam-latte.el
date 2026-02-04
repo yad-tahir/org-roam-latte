@@ -164,7 +164,7 @@ This is used by `org-roam-latte--scroll-handler'")
 ;;;
 
 (defun org-roam-latte--overlay-to-keyword (overlay)
-  "Covert OVERLAY to keyword.
+  "Convert OVERLAY to keyword.
 
 Return nil if the overlay cannot be converted."
   (when overlay
@@ -187,17 +187,16 @@ If END is nil, then `(point-max)' will be used."
   "Return t if an overlay for KEYWORD already exists between START and END."
   (catch 'org-roam-latte--overlay-found
     (dolist (overlay (overlays-in start end))
-    ;; Check if object/properties
-    (if (and (equal keyword (org-roam-latte--overlay-to-keyword overlay))
-             (equal (overlay-start overlay) start)
-             (equal (overlay-end overlay) end))
-        (throw 'org-roam-latte--overlay-found t)
-      ;; Else:
-      ;; 1- Region mismatch; e.g. an old overlay that does not
-      ;; accommodate the extra length. Clean it and continue searching.
-      ;; 2- keyword mismatch.
-      (delete-overlay overlay))
-    nil)))
+      (if (and (equal keyword (org-roam-latte--overlay-to-keyword overlay))
+               (equal (overlay-start overlay) start)
+               (equal (overlay-end overlay) end))
+          (throw 'org-roam-latte--overlay-found t)
+        ;; Else:
+        ;; 1- Region mismatch; e.g. an old overlay that does not
+        ;; accommodate the extra length. Clean it and continue searching.
+        ;; 2- keyword mismatch.
+        (delete-overlay overlay))
+      nil)))
 
 (defun org-roam-latte--phrase-to-keyword (phrase)
   "Return keyword if PHRASE is a known keyword in org-roam.
@@ -208,16 +207,11 @@ Otherwise, nil."
     (setq pharse (downcase (substring-no-properties phrase)))
     (gethash phrase org-roam-latte--keywords)))
 
-(defun org-roam-latte--highlight-buffers ()
-  "Trigger highlighting for all buffers where the mode is active."
-  (dolist (buffer (buffer-list))
-    (org-roam-latte--highlight-buffer nil nil buffer)))
-
-(defun org-roam-latte--highlight-buffer (&optional start end buffer)
+(defun org-roam-latte--highlight-buffer (start end &optional buffer)
   "Highlight keywords in BUFFER between START and END positions.
 
-If BUFFER is nil, use current buffer. If START/END are nil, use the visible
-window."
+If BUFFER is nil, use current buffer. If START/END are nil, buffer window start
+and end will be used, respectively."
   (setq buffer (or buffer (current-buffer)))
   (with-current-buffer buffer
     (when (bound-and-true-p org-roam-latte-mode)
@@ -225,6 +219,11 @@ window."
         (let ((b-start (or start (window-start b-win)))
               (b-end (or end (window-end b-win t))))
           (org-roam-latte--make-overlays buffer b-start b-end))))))
+
+(defun org-roam-latte--highlight-buffers ()
+  "Trigger highlighting for all buffers where the mode is active."
+  (dolist (buffer (buffer-list))
+    (org-roam-latte--highlight-buffer nil nil buffer)))
 
 (defun org-roam-latte--match-highlightable (keyword)
   "Return non-nil if KEYWORD is suitable for highlighting in the current context.
@@ -573,7 +572,7 @@ terms."
         (add-hook 'window-scroll-functions #'org-roam-latte--scroll-handler t t)
         (add-hook 'after-change-functions #'org-roam-latte--after-change-function t t)
         ;; Initial highlighting
-        (org-roam-latte--highlight-buffer))
+        (org-roam-latte--highlight-buffer nil nil))
 
     (progn ;; Off
       (org-roam-latte--delete-overlays)
