@@ -221,7 +221,7 @@ window."
   (setq buffer (or buffer (current-buffer)))
   (with-current-buffer buffer
     (when (bound-and-true-p org-roam-latte-mode)
-      (when-let ((b-win (get-buffer-window)))
+      (when-let ((b-win (get-buffer-window nil 'visible)))
         (let ((b-start (or start (window-start b-win)))
               (b-end (or end (window-end b-win t))))
           (org-roam-latte--make-overlays buffer b-start b-end))))))
@@ -423,6 +423,32 @@ Otherwise, insert at point."
 ;; Hooks and Advisors
 ;;
 
+(defun org-roam-latte--node-clear (&rest args)
+  "Called when a node has been deleted in org-roam.
+
+ARGS arguments passed from the hook."
+  (org-roam-latte--db-modified args))
+
+(defun org-roam-latte--node-modified (fn &rest args)
+  "Called when a node has been modified in org-roam.
+
+FN: The 'around' function object.
+ARGS: the rest of arguments passed from the hook."
+
+  ;; Org-roam updates a file node by first deleting it then
+  ;; re-inserting it. We disable clear hook temporary during update
+  ;; so that, buffers are now re-highlighted twice.
+  (advice-remove 'org-roam-db-clear-file #'org-roam-latte--node-clear)
+  (unwind-protect
+      ;; Try
+      (progn
+        (with-demoted-errors "%S"
+          (apply fn args))
+        (with-demoted-errors "Org-roam-latte Error: %S"
+          (org-roam-latte--db-modified args)))
+    ;; Finally
+    (advice-add 'org-roam-db-clear-file :after #'org-roam-latte--node-clear)))
+
 (defun org-roam-latte--db-modified (&rest _args)
   "Rebuild the keyword hash table from the Org-roam database.
 Populates `org-roam-latte--keywords` with titles and aliases."
@@ -533,11 +559,13 @@ terms."
       (progn ;; On
         (unless org-roam-latte--initialized
           ;; Globally called once scope
-          ;; Hook into Org Roam DB updates to keep keywords fresh
-          (advice-add 'org-roam-db-update-file :after #'org-roam-latte--db-modified)
-          (advice-add 'org-roam-db-insert-file :after #'org-roam-latte--db-modified)
-          (advice-add 'org-roam-db-clear-file :after  #'org-roam-latte--db-modified)
-          (advice-add 'org-roam-db-sync :after #'org-roam-latte--db-modified)
+
+          ;; Hook into Org Roam DB updates to refresh hash tables and redraw
+          ;; visible buffers.
+          (advice-add 'org-roam-db-update-file :around #'org-roam-latte--node-modified)
+          ;; clear hook can be temporary removed; check `org-roam-latte--node-modified'
+          (advice-add 'org-roam-db-clear-file :after #'org-roam-latte--node-clear)
+
           ;; Populate the hash table
           (org-roam-latte--db-modified)
           (setq org-roam-latte--initialized t))
