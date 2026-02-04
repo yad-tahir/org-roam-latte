@@ -8,6 +8,7 @@
 
 * **Fast:** Scans only the **visible** section of a buffer, and checks against a hash table. It stays snappy even with thousands of nodes.
 * **Instant:** Automatically highlights keywords as you type, instantly surfacing potential links.
+* **Non-org Modes:** Allows you to have virtual, navigable links in any mode: text, code, shells, man pages, etc.
 * **Smart Linking:** Highlighted words are navigatable.
     * **Click / RET**: Visit the node.
     * **M-RET**: Convert the text into a formal org-roam ID link.
