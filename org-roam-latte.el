@@ -329,7 +329,8 @@ This function uses an inverted search strategy: it scans the buffer text for
 word boundaries (O(M)) and verifies them against the keyword hash table (O(1)).
 This avoids the performance penalty of iterating through the entire database."
   (with-current-buffer buffer
-    (ignore-errors
+    ;; Avoid hard crashes on errors; worst case, just don't draw highlights
+    (with-demoted-errors "Org-roam-latte: %S"
       (setq start (or start (point-min))
             end (min (or end (point-max)) (point-max)))
       (save-excursion
