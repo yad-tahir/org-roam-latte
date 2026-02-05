@@ -484,7 +484,7 @@ Otherwise, insert at point."
 ;; Hooks and Advisors
 ;;
 
-(defun org-roam-latte--node-clear (&rest args)
+(defun org-roam-latte--node-cleared (&rest args)
   "Called when a node has been deleted in org-roam.
 
 ARGS arguments passed from the hook."
@@ -499,7 +499,7 @@ ARGS: the rest of arguments passed from the hook."
   ;; Org-roam updates a file node by first deleting it then
   ;; re-inserting it. We disable clear hook temporary during update
   ;; so that, buffers are now re-highlighted twice.
-  (advice-remove 'org-roam-db-clear-file #'org-roam-latte--node-clear)
+  (advice-remove 'org-roam-db-clear-file #'org-roam-latte--node-cleared)
   (unwind-protect
       ;; Try
       (progn
@@ -508,7 +508,7 @@ ARGS: the rest of arguments passed from the hook."
         (with-demoted-errors "Org-roam-latte Error: %S"
           (org-roam-latte--db-modified args)))
     ;; Finally
-    (advice-add 'org-roam-db-clear-file :after #'org-roam-latte--node-clear)))
+    (advice-add 'org-roam-db-clear-file :after #'org-roam-latte--node-cleared)))
 
 (defun org-roam-latte--db-modified (&rest _args)
   "Rebuild the keyword hash table from the Org-roam database.
@@ -622,7 +622,7 @@ terms."
         (unless org-roam-latte--initialized
           (advice-add 'org-roam-db-update-file :around #'org-roam-latte--node-modified)
           ;; Clear hook can be temporary removed; check `org-roam-latte--node-modified'
-          (advice-add 'org-roam-db-clear-file :after #'org-roam-latte--node-clear)
+          (advice-add 'org-roam-db-clear-file :after #'org-roam-latte--node-cleared)
           ;; Populate the hash table
           (org-roam-latte--db-modified)
           (setq org-roam-latte--initialized t))
