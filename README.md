@@ -63,6 +63,7 @@ When you navigate to a highlighted word (declared in `org-roam-latte-keyword-map
 | `org-roam-latte-exclude-words` | `'()` | A list of strings to exclude from highlighting. |
 | `org-roam-latte-exclude-org-elements` | `'(link node-property keyword)` | A list of org element types to exclude from highlighting. |
 | `org-roam-latte-exclude-scope` | `'node` | Filters out keywords linking to the current context: nil (highlight all), 'node (exclude title/aliases defined by current node), or 'parents (exclude current node and its ancestors) - See 'Self-Referencing Exclusion' section. |
+| `org-roam-latte-respect-node-tags` | `nil` | When non-nil, restrict exclude-scope further by requiring shared tags - See 'Strict Tag Matching' section. |
 | `org-roam-latte-highlight-prog-comments` | `t` | If `t`, Latte highlights keywords inside comments in programming modes. |
 | `org-roam-latte-base-priority` | `0` | The base priority for highlights, allowing you to control their stacking order relative to overlays from other modes. |
 
@@ -94,6 +95,35 @@ Adjusting `org-roam-latte-exclude-scope` gives:
 
 **Note:** The `'parents` option requires *traversing* the document structure upwards for every match. While effective, it may be slow in **very large** Org files.
 
+### Strict Tag Matching
+
+You can enforce stricter highlighting rules by requiring that keywords share a **context (tag)** with your current note before they are highlighted. The key benefit of this is avoiding irrelevant highlighting within your notes via the declared node tags.
+
+When `org-roam-latte-respect-node-tags` is set to `t`, `org-roam-latte` will check if the keyword matches the tags of the current node (or its ancestors). If there is no shared tag, the keyword is ignored—even if it isn't strictly excluded by your scope rules.
+
+Enabling this variable effectively "upgrades" your `org-roam-latte-exclude-scope` to a stricter version, as showing below:
+
+| Current Scope (`exclude-scope`) | Effect with `respect-node-tags` enabled |
+| :--- | :--- |
+| **`nil`** (Highlight All) | **Tags Only:** Highlight everything, *but only if* the keyword and current node share a tag. |
+| **`'node`** | **Node + Tags:** Do not highlight the current node. For all other matches, require a shared tag. |
+| **`'parents`** | **Parents + Tags:** Do not highlight ancestors. For all other matches, require a shared tag between the keyword and the specific ancestor context. |
+
+> **ℹ️ The Wildcard Rule**
+> If a keyword node has **no tags** defined in Org Roam, it is treated as a "global" keyword. It will always be highlighted, regardless of the tag settings on the current node.
+
+#### Example Scenario
+
+Imagine you have a node with the title **"Python"** and tagged with `:programming`.
+
+* **In a note tagged `:cooking`:**
+    * *Default:* "Python" is highlighted.
+    * *With `respect-node-tags`:* "Python" is **NOT** highlighted (tags do not match).
+
+* **In a note tagged `:programming`:**
+    * *Default:* "Python" is highlighted.
+    * *With `respect-node-tags`:* "Python" is highlighted (tags match).
+      
 ### Theming
 The highlighting face is `org-roam-latte-keyword-face`. It defaults to **Purple** (Light Mode) or **Cyan** (Dark Mode) with a wavy underline. You can customize this in your config, e.g.:
 
