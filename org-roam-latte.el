@@ -197,60 +197,6 @@ Return nil if the overlay cannot be converted."
     (let ((key (overlay-get overlay 'org-roam-latte-key)))
       (org-roam-latte--phrase-to-keyword key))))
 
-(defun org-roam-latte--delete-overlays (&optional start end)
-  "Delete Latte overlays in region defined by START and END.
-
-If START is nil, then `(point-min)' will be used.
-If END is nil, then `(point-max)' will be used."
-  (setq start (or start (point-min))
-        end (or end (point-max)))
-  (dolist (overlay (overlays-in start end))
-    (let* ((key (overlay-get overlay 'org-roam-latte-key)))
-      (when key
-        (delete-overlay overlay)))))
-
-(defun org-roam-latte--overlay-exists (keyword start end)
-  "Return t if an overlay for KEYWORD already exists between START and END."
-  (catch 'org-roam-latte--overlay-found
-    (dolist (overlay (overlays-in start end))
-      (if (and (equal keyword (org-roam-latte--overlay-to-keyword overlay))
-               (equal (overlay-start overlay) start)
-               (equal (overlay-end overlay) end))
-          (throw 'org-roam-latte--overlay-found t)
-        ;; Else:
-        ;; 1- Region mismatch; e.g. an old overlay that does not
-        ;; accommodate the extra length. Clean it and continue searching.
-        ;; 2- keyword mismatch.
-        (delete-overlay overlay))
-      nil)))
-
-(defun org-roam-latte--phrase-to-keyword (phrase)
-  "Return keyword if PHRASE is a known keyword in org-roam.
-
-Otherwise, nil."
-  (when (and phrase
-             (stringp phrase))
-    (setq pharse (downcase (substring-no-properties phrase)))
-    (gethash phrase org-roam-latte--keywords)))
-
-(defun org-roam-latte--highlight-buffer (start end &optional buffer)
-  "Highlight keywords in BUFFER between START and END positions.
-
-If BUFFER is nil, use current buffer. If START/END are nil, buffer window start
-and end will be used, respectively."
-  (setq buffer (or buffer (current-buffer)))
-  (with-current-buffer buffer
-    (when (bound-and-true-p org-roam-latte-mode)
-      (when-let ((b-win (get-buffer-window nil 'visible)))
-        (let ((b-start (or start (window-start b-win)))
-              (b-end (or end (window-end b-win t))))
-          (org-roam-latte--make-overlays buffer b-start b-end))))))
-
-(defun org-roam-latte--highlight-buffers ()
-  "Trigger highlighting for all buffers where the mode is active."
-  (dolist (buffer (buffer-list))
-    (org-roam-latte--highlight-buffer nil nil buffer)))
-
 (defun org-roam-latte--has-common-tag-p (keyword-nodes node)
   "Return non-nil if NODE shares a tag with KEYWORD-NODES or has no tags."
   (let ((node-tags (org-roam-node-tags node)))
@@ -349,6 +295,33 @@ LIMIT determines where the search should stop."
               (setq result (cons start current-end)))))))
     result))
 
+(defun org-roam-latte--delete-overlays (&optional start end)
+  "Delete Latte overlays in region defined by START and END.
+
+If START is nil, then `(point-min)' will be used.
+If END is nil, then `(point-max)' will be used."
+  (setq start (or start (point-min))
+        end (or end (point-max)))
+  (dolist (overlay (overlays-in start end))
+    (let* ((key (overlay-get overlay 'org-roam-latte-key)))
+      (when key
+        (delete-overlay overlay)))))
+
+(defun org-roam-latte--overlay-exists (keyword start end)
+  "Return t if an overlay for KEYWORD already exists between START and END."
+  (catch 'org-roam-latte--overlay-found
+    (dolist (overlay (overlays-in start end))
+      (if (and (equal keyword (org-roam-latte--overlay-to-keyword overlay))
+               (equal (overlay-start overlay) start)
+               (equal (overlay-end overlay) end))
+          (throw 'org-roam-latte--overlay-found t)
+        ;; Else:
+        ;; 1- Region mismatch; e.g. an old overlay that does not
+        ;; accommodate the extra length. Clean it and continue searching.
+        ;; 2- keyword mismatch.
+        (delete-overlay overlay))
+      nil)))
+
 (defun org-roam-latte--make-overlays (buffer &optional start end)
   "Create overlays for keywords in BUFFER between START and END.
 
@@ -404,6 +377,33 @@ This avoids the performance penalty of iterating through the entire database."
                         (overlay-put o 'priority
                                      (+ org-roam-latte-base-priority
                                         (length phrase-text)))))))))))))))
+
+(defun org-roam-latte--highlight-buffer (start end &optional buffer)
+  "Highlight keywords in BUFFER between START and END positions.
+
+If BUFFER is nil, use current buffer. If START/END are nil, buffer window start
+and end will be used, respectively."
+  (setq buffer (or buffer (current-buffer)))
+  (with-current-buffer buffer
+    (when (bound-and-true-p org-roam-latte-mode)
+      (when-let ((b-win (get-buffer-window nil 'visible)))
+        (let ((b-start (or start (window-start b-win)))
+              (b-end (or end (window-end b-win t))))
+          (org-roam-latte--make-overlays buffer b-start b-end))))))
+
+(defun org-roam-latte--highlight-buffers ()
+  "Trigger highlighting for all buffers where the mode is active."
+  (dolist (buffer (buffer-list))
+    (org-roam-latte--highlight-buffer nil nil buffer)))
+
+(defun org-roam-latte--phrase-to-keyword (phrase)
+  "Return keyword if PHRASE is a known keyword in org-roam.
+
+Otherwise, nil."
+  (when (and phrase
+             (stringp phrase))
+    (setq pharse (downcase (substring-no-properties phrase)))
+    (gethash phrase org-roam-latte--keywords)))
 
 (defun org-roam-latte--pluralize (phrase)
   "Return the plural form of PHRASE using standard grammar rules.
@@ -618,15 +618,11 @@ terms."
 
   (if org-roam-latte-mode
       (progn ;; On
+        ;; Globally called once scope
         (unless org-roam-latte--initialized
-          ;; Globally called once scope
-
-          ;; Hook into Org Roam DB updates to refresh hash tables and redraw
-          ;; visible buffers.
           (advice-add 'org-roam-db-update-file :around #'org-roam-latte--node-modified)
-          ;; clear hook can be temporary removed; check `org-roam-latte--node-modified'
+          ;; Clear hook can be temporary removed; check `org-roam-latte--node-modified'
           (advice-add 'org-roam-db-clear-file :after #'org-roam-latte--node-clear)
-
           ;; Populate the hash table
           (org-roam-latte--db-modified)
           (setq org-roam-latte--initialized t))
