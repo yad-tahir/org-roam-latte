@@ -12,7 +12,7 @@
 * **Smart Linking:** Highlighted words are navigatable.
     * **Click / RET**: Visit the node.
     * **M-RET**: Convert the text into a formal org-roam ID link.
-* **Pluralization:** Automatically handles pluralization (e.g., a node titled "Algorithm" will highlight "algorithms" in your text).
+* **Pluralization:** Automatically manages pluralization adjustments (e.g., a node titled "Algorithm" will highlight "algorithms" in your text, or vice versa).
 * **Context Aware:** Ignores existing Org links and node self-referencing. It intelligent handles code blocks (only highlights inside comments).
 * **Theme Aware:** Adapts colors automatically for _light_ and _dark_ themes.
 
@@ -75,14 +75,14 @@ Imagine your Org file looks like this.
 ```text
 * Solar System                 <-- Org-roam Note 1 /(Parent Node)
   :PROPERTIES: ... :END:
-   
+
   ** Mars                      <-- Org-roam Note 2
      :PROPERTIES: ... :END:
-      
+
      "I am studying the Solar System while standing on Mars."
-                        ^                              ^
-                        |                              |
-                   Matches Parent                 Matches Current
+			^                              ^
+			|                              |
+		   Matches Parent                 Matches Current
 ```
 
 Adjusting `org-roam-latte-exclude-scope` gives:
@@ -123,7 +123,7 @@ Imagine you have a node with the title **"Python"** and tagged with `:programmin
 * **In a note tagged `:programming`:**
     * *Default:* "Python" is highlighted.
     * *With `respect-node-tags`:* "Python" is highlighted (tags match).
-      
+
 ### Theming
 The highlighting face is `org-roam-latte-keyword-face`. It defaults to **Purple** (Light Mode) or **Cyan** (Dark Mode) with a wavy underline. You can customize this in your config, e.g.:
 

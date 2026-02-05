@@ -51,8 +51,9 @@
 ;; - Smart Linking: Highlighted words are navigatable.
 ;;     Click / RET: Visit the node.
 ;;     M-RET: Convert the text into a formal org-roam ID link.
-;; - Pluralization: Automatically handles pluralization (e.g., a node titled
-;; "Algorithm" will highlight "algorithms" in your text).
+;; - Pluralization: Automatically manages pluralization adjustments (e.g.,
+;; a node titled "Algorithm" will highlight "algorithms" in your text, or vice
+;; versa).
 ;; - Context Aware: Ignores existing Org links and node self-referencing. It
 ;; intelligent handles code blocks (only highlights inside comments).
 ;; - Theme Aware: Adapts colors automatically for light and dark themes.
@@ -409,10 +410,12 @@ Otherwise, nil."
     (setq pharse (downcase (substring-no-properties phrase)))
     (gethash phrase org-roam-latte--keywords)))
 
-(defun org-roam-latte--pluralize (phrase)
-  "Return the plural form of PHRASE using standard grammar rules.
+(defun org-roam-latte--singularize (phrase)
+  "Return the singularized form of PHRASE using standard grammar rules."
+  (inflection-singularize-string phrase))
 
-Used to match pluralized text against singular node titles."
+(defun org-roam-latte--pluralize (phrase)
+  "Return the plural form of PHRASE using standard grammar rules."
   (inflection-pluralize-string phrase))
 
 (defun org-roam-latte--add-keyword (phrase node)
@@ -424,7 +427,8 @@ Stores NODE in a list as a text property 'nodes on the KEYWORD string."
       (let* ((key (downcase phrase))
              (value (or (gethash key org-roam-latte--keywords)
                         key))
-             (nodes (get-text-property 0 'nodes value)))
+             (nodes (get-text-property 0 'nodes value))
+             (singularize (org-roam-latte--singularize key)))
         ;; Compare by ID
         (unless (cl-member (org-roam-node-id node) nodes
                            :key #'org-roam-node-id
@@ -436,7 +440,11 @@ Stores NODE in a list as a text property 'nodes on the KEYWORD string."
         (puthash key value org-roam-latte--keywords)
         (puthash (downcase (org-roam-latte--pluralize key))
                  value
-                 org-roam-latte--keywords)))))
+                 org-roam-latte--keywords)
+        ;; If it is already pluralize
+        (unless (string= key singularize)
+          (puthash singularize value org-roam-latte--keywords))))))
+
 
 (defun org-roam-latte--node-link-insert (keyword &optional beg end)
   "Convert KEYWORD into an Org-Roam node link.
