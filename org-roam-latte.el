@@ -607,7 +607,7 @@ WIN The window object in which the scroll event has occurred."
 When enabled:
 1. Scans the buffer for text matching titles or aliases in your Org-roam
 database.
-2. Highlights matching text (ignoring existing links).
+2. Highlights matching text if it is allowed.
 3. Provides keybindings set in `org-roam-latte-keyword-map' on highlighted
 terms."
   :init-value nil
