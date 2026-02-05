@@ -85,19 +85,41 @@ Words in this list will not be highlighted even if they match an Org-roam node."
 This controls where the highlighter should stop if the keyword matches the
 current context.
 
-- nil      : Do not exclude anything (Highlight everywhere).
-- 'node    : Do not highlight keywords that link to the current node.
-- 'parents : Do not highlight keywords that link to the current node,
-             or any of its parent headings (ancestors).
+- nil           : Do not exclude anything (Highlight everything).
+- 'node         : Do not highlight keywords defined by the current node.
+- 'parents      : Do not highlight keywords defined by the current node or
+                  any of its parent headings (ancestors).
 
-WARNING: The 'parents option requires traversing the document structure
-upwards for every potential match. This has naturally slow performance
-and is NOT recommended for use in large Org files."
+WARNING: The 'parents option requires traversing the document structure upwards
+for every potential match. This has naturally slow performance and is NOT
+recommended for use in large Org files."
   :group 'org-roam-latte
   :type '(choice
-          (const :tag "Highlight everywhere (No exclusion)" nil)
-          (const :tag "Exclude current node only" node)
-          (const :tag "Exclude current node and parents" parents)))
+          (const :tag "Highlight everything (No exclusion)"
+                 nil)
+          (const :tag "Exclude keywords defined by the current node"
+                 node)
+          (const :tag "Exclude keywords defined by current node or its parents"
+                 parents)))
+
+(defcustom org-roam-latte-respect-node-tags nil
+  "When non-nil, strictly require shared tags for highlighting.
+
+This variable refines the behavior of `org-roam-latte-exclude-scope` by adding
+a mandatory tag check. If enabled, a keyword will NOT be highlighted unless it
+shares at least one tag with the current node (or its ancestors - depending on
+the scope).
+
+This effectively upgrades the `org-roam-latte-exclude-scope' as follows:
+- nil      : Highlight only if a shared tag exists
+- 'node    : Exclude current node AND require tag match
+- 'parents : Exclude parents AND require tag match with either current mode or
+             one of its parents
+
+If the keyword's definition has no tags, it is treated as a wildcard and
+accepted."
+  :group 'org-roam-latte
+  :type 'boolean)
 
 (defcustom org-roam-latte-exclude-org-elements '(link node-property keyword)
   "List of Org element types where highlight should not be created.
@@ -229,38 +251,67 @@ and end will be used, respectively."
   (dolist (buffer (buffer-list))
     (org-roam-latte--highlight-buffer nil nil buffer)))
 
+(defun org-roam-latte--common-tag (keyword-nodes target-tags)
+  "Return non-nil if there is a tag in TARGET-TAGS is found in KEYWORD-NODES."
+  (cl-loop for node in keyword-nodes
+           thereis (cl-intersection (org-roam-node-tags node)
+                                    target-tags
+                                    :test #'string=)))
+
 (defun org-roam-latte--match-highlightable (keyword)
-  "Return non-nil if KEYWORD is suitable for highlighting in the current context.
+  "Return non-nil if KEYWORD is suitable for highlighting in current context.
 
 This function determines if a KEYWORD should be highlighted by checking if the
-current Org Roam node (or its ancestors) is among the KEYWORD's associated nodes.
-This prevents self-referencing highlights (e.g., highlighting a link to 'Note A'
-while inside 'Note A').
+current Org Roam node (or its ancestors) satisfies the rules set by
+`org-roam-latte-exclude-scope' and `org-roam-latte-respect-node-tags'"
 
-The behavior is controlled by `org-roam-latte-exclude-scope'"
-  ;; Nil mode
-  (if (or (null org-roam-latte-exclude-scope)
-          (not (derived-mode-p 'org-mode)))
-      t ;; Default: Allow highlighting if we aren't checking exclusions
-    (let ((nodes (get-text-property 0 'nodes keyword))
-          (current-node (org-roam-node-at-point))
-          (should-highlight t)) ;; Default to true
-      (if (eq org-roam-latte-exclude-scope 'node)
-          ;; Node mode
-          (setq should-highlight
-                (and current-node
-                     nodes
-                     (not (member current-node nodes))))
-        ;; Parents mode - Go through ancestors starting at POINT
-        (let ((ancestors (org-element-lineage (org-element-at-point))))
-          (save-excursion
-            (dolist (parent ancestors)
-              (when should-highlight
-                (goto-char (org-element-property :begin parent))
-                (let ((current-node (org-roam-node-at-point)))
-                  (when (member current-node nodes)
-                    (setq should-highlight nil))))))))
-      should-highlight)))
+(let ((effective-scope
+         (if org-roam-latte-respect-node-tags
+             (pcase org-roam-latte-exclude-scope
+               ('nil     'tags)         ; nil mode + strict tags -> tags
+               ('node    'node-tags)    ; node + strict tags -> node-tags
+               ('parents 'parents-tags) ; parents + strict tags -> parents-tags
+               (_ org-roam-latte-exclude-scope))
+           org-roam-latte-exclude-scope)))
+
+    (if (or (null effective-scope)
+            (not (derived-mode-p 'org-mode)))
+        t
+      (let ((keyword-nodes (get-text-property 0 'nodes keyword)))
+        (and keyword-nodes
+             (let ((current-node (org-roam-node-at-point)))
+               (pcase effective-scope
+                 ('node
+                  (not (member current-node keyword-nodes)))
+
+                 ('tags
+                  (let ((curr-tags (org-roam-node-tags current-node)))
+                    (or (null curr-tags)
+                        (org-roam-latte--common-tag keyword-nodes curr-tags))))
+
+                 ('node-tags
+                  (and (not (member current-node keyword-nodes))
+                       (let ((curr-tags (org-roam-node-tags current-node)))
+                         (or (null curr-tags)
+                             (org-roam-latte--common-tag keyword-nodes curr-tags)))))
+
+                 ((or 'parents 'parents-tags)
+                  (save-restriction
+                    (widen)
+                    (let ((ancestors (org-element-lineage (org-element-at-point)))
+                          (check-tags-p (eq effective-scope 'parents-tags)))
+                      (not (cl-loop for parent in ancestors
+                                    do (goto-char (org-element-property :begin parent))
+                                    for parent-node = (org-roam-node-at-point)
+                                    ;; Reject if parent is one of the keyword nodes
+                                    if (member parent-node keyword-nodes) return t
+                                    ;; Reject if strict tags enabled AND parent matches nothing
+                                    if (and check-tags-p
+                                            (not (org-roam-latte--common-tag
+                                                  keyword-nodes
+                                                  (org-roam-node-tags parent-node))))
+                                    return t)))))
+                 (_ t))))))))
 
 (defun org-roam-latte--find-longest-match (start limit)
   "Look ahead from START to find the longest phrase existing in the DB.
