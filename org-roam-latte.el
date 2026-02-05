@@ -333,6 +333,9 @@ This avoids the performance penalty of iterating through the entire database."
     (with-demoted-errors "Org-roam-latte: %S"
       (setq start (or start (point-min))
             end (min (or end (point-max)) (point-max)))
+      ;; Force start < end to fix "Invalid search bound"
+      (when (> start end)
+        (cl-rotatef start end))
       (save-excursion
         (save-restriction
           (with-silent-modifications
