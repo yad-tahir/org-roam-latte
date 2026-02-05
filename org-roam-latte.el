@@ -251,67 +251,82 @@ and end will be used, respectively."
   (dolist (buffer (buffer-list))
     (org-roam-latte--highlight-buffer nil nil buffer)))
 
-(defun org-roam-latte--common-tag (keyword-nodes target-tags)
-  "Return non-nil if there is a tag in TARGET-TAGS is found in KEYWORD-NODES."
-  (cl-loop for node in keyword-nodes
+(defun org-roam-latte--has-common-tag-p (keyword-nodes node)
+  "Return non-nil if NODE shares a tag with KEYWORD-NODES or has no tags."
+  (let ((node-tags (org-roam-node-tags node)))
+    (or (null node-tags)
+        (cl-loop for node in keyword-nodes
            thereis (cl-intersection (org-roam-node-tags node)
-                                    target-tags
-                                    :test #'string=)))
+                                    node-tags
+                                    :test #'string=)))))
+
+(defun org-roam-latte--check-ancestors (keyword-nodes scope)
+  "Check ancestor lineage against KEYWORD-NODES using SCOPE rules."
+  (save-restriction
+    (widen)
+    (let ((ancestors (org-element-lineage (org-element-at-point)))
+          (check-tags-p (eq scope 'parents-tags)))
+      (not (cl-loop for parent in ancestors
+                    do (goto-char (org-element-property :begin parent))
+                    for parent-node = (org-roam-node-at-point)
+                    ;; Exclude if parent is the source of the keyword
+                    if (member parent-node keyword-nodes)
+                    return t
+                    ;; Exclude if strict tags are on and tags don't match
+                    if (and check-tags-p
+                            (not (org-roam-latte--has-common-tag-p
+                                  keyword-nodes parent-node)))
+                    return t)))))
 
 (defun org-roam-latte--match-highlightable (keyword)
   "Return non-nil if KEYWORD is suitable for highlighting in current context.
 
-This function determines if a KEYWORD should be highlighted by checking if the
-current Org Roam node (or its ancestors) satisfies the rules set by
-`org-roam-latte-exclude-scope' and `org-roam-latte-respect-node-tags'"
-
-(let ((effective-scope
-         (if org-roam-latte-respect-node-tags
-             (pcase org-roam-latte-exclude-scope
-               ('nil     'tags)         ; nil mode + strict tags -> tags
-               ('node    'node-tags)    ; node + strict tags -> node-tags
-               ('parents 'parents-tags) ; parents + strict tags -> parents-tags
-               (_ org-roam-latte-exclude-scope))
-           org-roam-latte-exclude-scope)))
-
-    (if (or (null effective-scope)
-            (not (derived-mode-p 'org-mode)))
-        t
-      (let ((keyword-nodes (get-text-property 0 'nodes keyword)))
-        (and keyword-nodes
-             (let ((current-node (org-roam-node-at-point)))
-               (pcase effective-scope
-                 ('node
-                  (not (member current-node keyword-nodes)))
-
-                 ('tags
-                  (let ((curr-tags (org-roam-node-tags current-node)))
-                    (or (null curr-tags)
-                        (org-roam-latte--common-tag keyword-nodes curr-tags))))
-
-                 ('node-tags
-                  (and (not (member current-node keyword-nodes))
-                       (let ((curr-tags (org-roam-node-tags current-node)))
-                         (or (null curr-tags)
-                             (org-roam-latte--common-tag keyword-nodes curr-tags)))))
-
-                 ((or 'parents 'parents-tags)
-                  (save-restriction
-                    (widen)
-                    (let ((ancestors (org-element-lineage (org-element-at-point)))
-                          (check-tags-p (eq effective-scope 'parents-tags)))
-                      (not (cl-loop for parent in ancestors
-                                    do (goto-char (org-element-property :begin parent))
-                                    for parent-node = (org-roam-node-at-point)
-                                    ;; Reject if parent is one of the keyword nodes
-                                    if (member parent-node keyword-nodes) return t
-                                    ;; Reject if strict tags enabled AND parent matches nothing
-                                    if (and check-tags-p
-                                            (not (org-roam-latte--common-tag
-                                                  keyword-nodes
-                                                  (org-roam-node-tags parent-node))))
-                                    return t)))))
-                 (_ t))))))))
+This function determines if a KEYWORD should be highlighted by
+- In Prog mode and a code comment.
+- Or in Org mode, not in `org-roam-latte-exclude-org-elements', and satisfies
+the rules set by `org-roam-latte-exclude-scope' and
+`org-roam-latte-respect-node-tags'."
+  (let ((in-org (derived-mode-p 'org-mode))
+        (in-prog (derived-mode-p 'prog-mode)))
+    (cond
+     ;; Prog mode but not in comments
+     ((and in-prog
+           org-roam-latte-highlight-prog-comments
+           (not (nth 4 (syntax-ppss))))
+      nil)
+     ;; Org mode but in exclude org elements
+     ((and in-org
+           (memq (org-element-type (org-element-context))
+                 org-roam-latte-exclude-org-elements))
+      nil)
+     ;; Org mode
+     (in-org
+      (let* ((keyword-nodes (get-text-property 0 'nodes keyword))
+             ;; Determine the effective scope rule based on strict-tags setting
+             (scope (if org-roam-latte-respect-node-tags
+                        (pcase org-roam-latte-exclude-scope
+                          ('nil     'tags)         ; Strict tags only
+                          ('node    'node-tags)    ; Node scope + Strict tags
+                          ('parents 'parents-tags) ; Parents scope + Strict tags
+                          (_ org-roam-latte-exclude-scope))
+                      org-roam-latte-exclude-scope)))
+        (when keyword-nodes
+          (if (null scope)
+              t
+            (let ((current-node (org-roam-node-at-point)))
+              (pcase scope
+                ('node
+                 (not (member current-node keyword-nodes)))
+                ('tags
+                 (org-roam-latte--has-common-tag-p keyword-nodes current-node))
+                ('node-tags
+                 (and (not (member current-node keyword-nodes))
+                      (org-roam-latte--has-common-tag-p
+                       keyword-nodes current-node)))
+                ((or 'parents 'parents-tags)
+                 (org-roam-latte--check-ancestors keyword-nodes scope))))))))
+     ;; Everything else allowed
+     (t t))))
 
 (defun org-roam-latte--find-longest-match (start limit)
   "Look ahead from START to find the longest phrase existing in the DB.
@@ -366,20 +381,12 @@ This avoids the performance penalty of iterating through the entire database."
                                                  (cdr full-match))))
                          (keyword (org-roam-latte--phrase-to-keyword phrase-text)))
 
-                    ;; If we found a multi-word match, move point there to avoid
-                    ;; double-counting
+                    ;; If we found a multi-word match, move point to end to
+                    ;; avoid double-counting
                     (goto-char match-end)
 
-                    (unless (or (org-roam-latte--overlay-exists
-                                 keyword match-beg match-end)
-                                (and (derived-mode-p 'org-mode)
-                                     ;; Avoid highlighting on excluded elements
-                                     (memq (org-element-type (org-element-context))
-                                           org-roam-latte-exclude-org-elements))
-                                ;; Handle prog-mode comments logic
-                                (and org-roam-latte-highlight-prog-comments
-                                     (derived-mode-p 'prog-mode)
-                                     (not (nth 4 (syntax-ppss)))))
+                    (unless (org-roam-latte--overlay-exists
+                             keyword match-beg match-end)
 
                       (let ((o (make-overlay match-beg match-end)))
                         (overlay-put o 'face 'org-roam-latte-keyword-face)
