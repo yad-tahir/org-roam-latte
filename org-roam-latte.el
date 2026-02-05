@@ -563,6 +563,7 @@ WIN The window object in which the scroll event has occurred."
          (nodes (get-text-property 0 'nodes keyword)))
     (when nodes
       (member node nodes))))
+
 ;;
 ;; Public functions
 ;;
