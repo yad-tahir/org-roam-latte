@@ -203,9 +203,9 @@ Return nil if the overlay cannot be converted."
   (let ((node-tags (org-roam-node-tags node)))
     (or (null node-tags)
         (cl-loop for node in keyword-nodes
-           thereis (cl-intersection (org-roam-node-tags node)
-                                    node-tags
-                                    :test #'string=)))))
+                 thereis (cl-intersection (org-roam-node-tags node)
+                                          node-tags
+                                          :test #'string=)))))
 
 (defun org-roam-latte--check-ancestors (keyword-nodes scope)
   "Check ancestor lineage against KEYWORD-NODES using SCOPE rules."
