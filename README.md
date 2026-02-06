@@ -68,7 +68,7 @@ When you navigate to a highlighted word (declared in `org-roam-latte-keyword-map
 | `org-roam-latte-base-priority` | `0` | The base priority for highlights, allowing you to control their stacking order relative to overlays from other modes. |
 
 ### Self-Referencing Exclusion
-By default, `org-roam-latte` prevents a node from highlighting its own title or aliases within its own body text. You can control how strict this *self-referencing* filter is using the `org-roam-latte-exclude-scope` variable. To explain this further, consider the following example:
+By default, Latte prevents a node from highlighting its own title or aliases within its own body text. You can control how strict this *self-referencing* filter is using the `org-roam-latte-exclude-scope` variable. To explain this further, consider the following example:
 
 Imagine your Org file looks like this.
 
@@ -110,17 +110,17 @@ Enabling this variable effectively "upgrades" your `org-roam-latte-exclude-scope
 | **`'parents`** | **Parents + Tags:** Do not highlight ancestors. For all other matches, require a shared tag between the keyword and the specific ancestor context. |
 
 > **ℹ️ The Wildcard Rule**
-> If a keyword node has **no tags** defined in Org Roam, it is treated as a "global" keyword. It will always be highlighted, regardless of the tag settings on the current node.
+> If the current node has **no tags**, it is treated as a "global wildcard", and no tag related filterations are applied.
 
 #### Example Scenario
 
 Imagine you have a node with the title **"Python"** and tagged with `:programming`.
 
-* **In a note tagged `:cooking`:**
+* **In a note tagged `:cooking`**
     * *Default:* "Python" is highlighted.
     * *With `respect-node-tags`:* "Python" is **NOT** highlighted (tags do not match).
 
-* **In a note tagged `:programming`:**
+* **In a note tagged `:programming` and `:web`**
     * *Default:* "Python" is highlighted.
     * *With `respect-node-tags`:* "Python" is highlighted (tags match).
 
