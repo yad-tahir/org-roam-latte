@@ -258,21 +258,20 @@ the rules set by `org-roam-latte-exclude-scope' and
                           (_ org-roam-latte-exclude-scope))
                       org-roam-latte-exclude-scope)))
         (when keyword-nodes
-          (if (null scope)
-              t
-            (let ((current-node (org-roam-node-at-point)))
-              (pcase scope
-                ('node
-                 (not (member current-node keyword-nodes)))
-                ('tags
-                 (org-roam-latte--has-common-tag-p keyword-nodes current-node))
-                ('node-tags
-                 (and (not (member current-node keyword-nodes))
-                      (org-roam-latte--has-common-tag-p
-                       keyword-nodes current-node)))
-                ((or 'parents 'parents-tags)
-                 (org-roam-latte--check-ancestors keyword-nodes scope))))))))
-     ;; Everything else allowed
+          (let ((current-node (org-roam-node-at-point)))
+            (pcase scope
+              ('nil t)
+              ('node
+               (not (member current-node keyword-nodes)))
+              ('tags
+               (org-roam-latte--has-common-tag-p keyword-nodes current-node))
+              ('node-tags
+               (and (not (member current-node keyword-nodes))
+                    (org-roam-latte--has-common-tag-p
+                     keyword-nodes current-node)))
+              ((or 'parents 'parents-tags)
+               (org-roam-latte--check-ancestors keyword-nodes scope)))))))
+     ;; By default
      (t t))))
 
 (defun org-roam-latte--find-longest-match (start limit)
