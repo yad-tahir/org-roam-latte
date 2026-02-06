@@ -571,6 +571,7 @@ WIN The window object in which the scroll event has occurred."
           org-roam-latte--prev-win win)))
 
 (defun org-roam-latte--completation-filter (node)
+  "Return non-nil, if NODE should be displayed during completions."
   (let* ((keyword (org-roam-latte--keyword-at-point))
          (nodes (get-text-property 0 'nodes keyword)))
     (when nodes
