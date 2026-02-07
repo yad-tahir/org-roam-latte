@@ -322,13 +322,13 @@ If END is nil, then `(point-max)' will be used."
         (delete-overlay overlay))
       nil)))
 
-(defun org-roam-latte--make-overlays (buffer &optional start end)
-  "Create overlays for keywords in BUFFER between START and END.
+(defun org-roam-latte--make-overlays (start end)
+  "Create overlays for keywords in region defined by START and END.
 
 This function uses an inverted search strategy: it scans the buffer text for
 word boundaries (O(M)) and verifies them against the keyword hash table (O(1)).
 This avoids the performance penalty of iterating through the entire database."
-  (with-current-buffer buffer
+  (with-silent-modifications
     ;; Avoid hard crashes on errors; worst case, just don't draw highlights
     (with-demoted-errors "Org-roam-latte: %S"
       (setq start (or start (point-min))
@@ -338,49 +338,48 @@ This avoids the performance penalty of iterating through the entire database."
         (cl-rotatef start end))
       (save-excursion
         (save-restriction
-          (with-silent-modifications
-            (narrow-to-region start end)
-            ;; Cleanup invalid overlays first
-            (org-roam-latte--delete-overlays start end)
+          (narrow-to-region start end)
+          ;; Cleanup invalid overlays first
+          (org-roam-latte--delete-overlays start end)
 
-            (goto-char start)
-            ;; Search for words/phrases in the buffer
-            (while (re-search-forward "\\b\\w+\\b" end t)
-              (let* ((word-beg (save-excursion (backward-word) (point)))
-                     ;; Check if this word starts a multi-word keyword
-                     (full-match (org-roam-latte--find-longest-match
-                                  word-beg end)))
-                (when full-match
-                  (let* ((match-beg (car full-match))
-                         (match-end (cdr full-match))
-                         (phrase-text (downcase (buffer-substring-no-properties
-                                                 (car full-match)
-                                                 (cdr full-match))))
-                         (keyword (org-roam-latte--phrase-to-keyword phrase-text)))
+          (goto-char start)
+          ;; Search for words/phrases in the buffer
+          (while (re-search-forward "\\b\\w+\\b" end t)
+            (let* ((word-beg (save-excursion (backward-word) (point)))
+                   ;; Check if this word starts a multi-word keyword
+                   (full-match (org-roam-latte--find-longest-match
+                                word-beg end)))
+              (when full-match
+                (let* ((match-beg (car full-match))
+                       (match-end (cdr full-match))
+                       (phrase-text (downcase (buffer-substring-no-properties
+                                               (car full-match)
+                                               (cdr full-match))))
+                       (keyword (org-roam-latte--phrase-to-keyword phrase-text)))
 
-                    ;; If we found a multi-word match, move point to end to
-                    ;; avoid double-counting
-                    (goto-char match-end)
+                  ;; If we found a multi-word match, move point to end to
+                  ;; avoid double-counting
+                  (goto-char match-end)
 
-                    (unless (org-roam-latte--overlay-exists
-                             keyword match-beg match-end)
+                  (unless (org-roam-latte--overlay-exists
+                           keyword match-beg match-end)
 
-                      (let ((o (make-overlay match-beg match-end)))
-                        (overlay-put o 'face 'org-roam-latte-keyword-face)
-                        (overlay-put o 'evaporate t)
-                        (overlay-put o 'keymap org-roam-latte-keyword-map)
-                        (overlay-put o 'mouse-face 'highlight)
-                        ;; To avoid cache inconsistency, we attach the key
-                        ;; instead of the keyword. This will also reduce the
-                        ;; memory load on Emacs. Other functions should use
-                        ;; `org-roam-latte--overlay-to-keyword' to get the
-                        ;; keyword
-                        (overlay-put o 'org-roam-latte-key
-                                     (substring-no-properties keyword))
-                        ;; Longer phrases get higher priority
-                        (overlay-put o 'priority
-                                     (+ org-roam-latte-base-priority
-                                        (length phrase-text)))))))))))))))
+                    (let ((o (make-overlay match-beg match-end)))
+                      (overlay-put o 'face 'org-roam-latte-keyword-face)
+                      (overlay-put o 'evaporate t)
+                      (overlay-put o 'keymap org-roam-latte-keyword-map)
+                      (overlay-put o 'mouse-face 'highlight)
+                      ;; To avoid cache inconsistency, we attach the key
+                      ;; instead of the keyword. This will also reduce the
+                      ;; memory load on Emacs. Other functions should use
+                      ;; `org-roam-latte--overlay-to-keyword' to get the
+                      ;; keyword
+                      (overlay-put o 'org-roam-latte-key
+                                   (substring-no-properties keyword))
+                      ;; Longer phrases get higher priority
+                      (overlay-put o 'priority
+                                   (+ org-roam-latte-base-priority
+                                      (length phrase-text))))))))))))))
 
 (defun org-roam-latte--highlight-buffer (start end &optional buffer)
   "Highlight keywords in BUFFER between START and END positions.
@@ -388,13 +387,14 @@ This avoids the performance penalty of iterating through the entire database."
 If BUFFER is nil, use current buffer. If START/END are nil, buffer window start
 and end will be used, respectively."
   (setq buffer (or buffer (current-buffer)))
-  (with-current-buffer buffer
-    (when (and (bound-and-true-p org-roam-latte-mode)
-               (not (minibufferp)))
-      (when-let ((b-win (get-buffer-window nil 'visible)))
-        (let ((b-start (or start (window-start b-win)))
-              (b-end (or end (window-end b-win t))))
-          (org-roam-latte--make-overlays buffer b-start b-end))))))
+  (when (buffer-live-p buffer) ;; In case the buffer has just been killed
+    (with-current-buffer buffer
+      (when (and (bound-and-true-p org-roam-latte-mode)
+                 (not (minibufferp)))
+        (when-let ((b-win (get-buffer-window nil 'visible)))
+          (let ((b-start (or start (window-start b-win)))
+                (b-end (or end (window-end b-win t))))
+            (org-roam-latte--make-overlays b-start b-end)))))))
 
 (defun org-roam-latte--highlight-buffers ()
   "Trigger highlighting for all buffers where the mode is active."
