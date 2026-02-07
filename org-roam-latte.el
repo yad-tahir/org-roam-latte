@@ -389,7 +389,8 @@ If BUFFER is nil, use current buffer. If START/END are nil, buffer window start
 and end will be used, respectively."
   (setq buffer (or buffer (current-buffer)))
   (with-current-buffer buffer
-    (when (bound-and-true-p org-roam-latte-mode)
+    (when (and (bound-and-true-p org-roam-latte-mode)
+               (not (minibufferp)))
       (when-let ((b-win (get-buffer-window nil 'visible)))
         (let ((b-start (or start (window-start b-win)))
               (b-end (or end (window-end b-win t))))
