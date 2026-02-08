@@ -1,6 +1,6 @@
 # ☕ Org-roam Latte
 
-[![Emacs](https://img.shields.io/badge/editor-emacs-7F5AB6.svg?logo=gnu-emacs&logoColor=white)](https://www.gnu.org/software/emacs/) [![MELPA](https://melpa.org/packages/org-roam-latte-badge.svg)](https://melpa.org/#/org-roam-latte)
+[![Emacs](https://img.shields.io/badge/editor-emacs-7F5AB6.svg?logo=gnu-emacs&logoColor=white)](https://www.gnu.org/software/emacs/) [![MELPA](https://melpa.org/packages/org-roam-latte-badge.svg)](https://melpa.org/#/org-roam-latte) [![MELPA Stable](https://stable.melpa.org/packages/org-roam-latte-badge.svg)](https://stable.melpa.org/#/org-roam-latte)
 
 **Org-roam Latte** is a minor mode that automatically highlights **unlinked org-roam references** in your buffer. It scans your current text and identifies words or phrases that match existing org-roam nodes (titles and aliases). It brings the "Unlinked Mentions" feature found in tools like Obsidian or Roam Research directly into Emacs, helping you discover connections you might have missed.
 
@@ -10,8 +10,8 @@
 * **Instant:** Automatically highlights keywords as you type, instantly surfacing potential links.
 * **Non-org Modes:** Allows you to have virtual, navigable links in any mode: text, code, shells, man pages, etc.
 * **Smart Linking:** Highlighted words are navigatable.
-    * **Click / RET**: Visit the node.
-    * **M-RET**: Convert the text into a formal org-roam ID link.
+	* **Click / RET**: Visit the node.
+	* **M-RET**: Convert the text into a formal org-roam ID link.
 * **Pluralization:** Automatically manages pluralization adjustments (e.g., a node titled "Algorithm" will highlight "algorithms" in your text, or vice versa).
 * **Context Aware:** Ignores existing Org links and node self-referencing. It intelligent handles code blocks (only highlights inside comments).
 * **Theme Aware:** Adapts colors automatically for _light_ and _dark_ themes.
@@ -77,9 +77,9 @@ Imagine your Org file looks like this.
   :PROPERTIES: ... :END:
 
   ** Mars                      <-- Org-roam Note 2
-     :PROPERTIES: ... :END:
+	 :PROPERTIES: ... :END:
 
-     "I am studying the Solar System while standing on Mars."
+	 "I am studying the Solar System while standing on Mars."
 			^                              ^
 			|                              |
 		   Matches Parent                 Matches Current
@@ -117,12 +117,12 @@ Enabling this variable effectively "upgrades" your `org-roam-latte-exclude-scope
 Imagine you have a node with the title **"Python"** and tagged with `:programming`.
 
 * **In a note tagged `:cooking`**
-    * *Default:* "Python" is highlighted.
-    * *With `respect-node-tags`:* "Python" is **NOT** highlighted (tags do not match).
+	* *Default:* "Python" is highlighted.
+	* *With `respect-node-tags`:* "Python" is **NOT** highlighted (tags do not match).
 
 * **In a note tagged `:programming` and `:web`**
-    * *Default:* "Python" is highlighted.
-    * *With `respect-node-tags`:* "Python" is highlighted (tags match).
+	* *Default:* "Python" is highlighted.
+	* *With `respect-node-tags`:* "Python" is highlighted (tags match).
 
 ### Theming
 The highlighting face is `org-roam-latte-keyword-face`. It defaults to **Purple** (Light Mode) or **Cyan** (Dark Mode) with a wavy underline. You can customize this in your config, e.g.:
