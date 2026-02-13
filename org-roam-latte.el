@@ -16,7 +16,7 @@
 ;; Author: Yad Tahir <yad at ieee.org>
 ;; URL: https://github.com/yad-tahir/org-roam-latte
 ;; Package-Requires: ((emacs "27.1") (org-roam "2.0") (inflections "1.1"))
-;; Package-Version: 1.0
+;; Package-Version: 1.1
 ;; Description: Auto-highlight unlinked Org-roam references
 ;; Keywords: hypermedia, outlines, org-roam, convenience
 
