@@ -200,12 +200,13 @@ Return nil if the overlay cannot be converted."
 
 (defun org-roam-latte--has-common-tag-p (keyword-nodes node)
   "Return non-nil if NODE shares a tag with KEYWORD-NODES or has no tags."
-  (let ((node-tags (org-roam-node-tags node)))
-    (or (null node-tags)
-        (cl-loop for node in keyword-nodes
-                 thereis (cl-intersection (org-roam-node-tags node)
-                                          node-tags
-                                          :test #'string=)))))
+  (when node
+    (let ((node-tags (org-roam-node-tags node)))
+      (or (null node-tags)
+          (cl-loop for node in keyword-nodes
+                   thereis (cl-intersection (org-roam-node-tags node)
+                                            node-tags
+                                            :test #'string=))))))
 
 (defun org-roam-latte--check-ancestors (keyword-nodes scope)
   "Check ancestor lineage against KEYWORD-NODES using SCOPE rules."
@@ -267,8 +268,7 @@ the rules set by `org-roam-latte-exclude-scope' and
                (org-roam-latte--has-common-tag-p keyword-nodes current-node))
               ('node-tags
                (and (not (member current-node keyword-nodes))
-                    (org-roam-latte--has-common-tag-p
-                     keyword-nodes current-node)))
+                    (org-roam-latte--has-common-tag-p keyword-nodes current-node)))
               ((or 'parents 'parents-tags)
                (org-roam-latte--check-ancestors keyword-nodes scope)))))))
      ;; By default
