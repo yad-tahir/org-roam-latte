@@ -422,7 +422,8 @@ Otherwise, nil."
   "Add PHRASE and its plural form as keywords to the `org-roam-latte--keywords'.
 
 Stores NODE in a list as a text property 'nodes on the KEYWORD string."
-  (when (and phrase (not (string-blank-p phrase)))
+  (when (and phrase
+             (not (string-blank-p phrase)))
     (unless (member phrase org-roam-latte-exclude-words)
       (let* ((key (downcase phrase))
              (value (or (gethash key org-roam-latte--keywords)
