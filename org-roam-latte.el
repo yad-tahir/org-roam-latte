@@ -208,6 +208,17 @@ Return nil if the overlay cannot be converted."
                                             node-tags
                                             :test #'string=))))))
 
+(defun org-roam-latte--member (node nodes)
+  "Return non-nil if NODE is a member of the list NODES.
+
+Membership is tested by comparing the `org-roam-node-id' of NODE
+against the ID of each element in NODES.  Like standard `member',
+this returns the tail of NODES starting with the matching element."
+  (cl-member (org-roam-node-id node)
+             nodes
+             :key #'org-roam-node-id
+             :test #'string=))
+
 (defun org-roam-latte--check-ancestors (keyword-nodes scope)
   "Check ancestor lineage against KEYWORD-NODES using SCOPE rules."
   (save-restriction
@@ -218,7 +229,7 @@ Return nil if the overlay cannot be converted."
                     do (goto-char (org-element-property :begin parent))
                     for parent-node = (org-roam-node-at-point)
                     ;; Exclude if parent is the source of the keyword
-                    if (member parent-node keyword-nodes)
+                    if (org-roam-latte--member parent-node keyword-nodes)
                     return t
                     ;; Exclude if strict tags are on and tags don't match
                     if (and check-tags-p
@@ -263,11 +274,11 @@ the rules set by `org-roam-latte-exclude-scope' and
             (pcase scope
               ('nil t)
               ('node
-               (not (member current-node keyword-nodes)))
+               (not (org-roam-latte--member current-node keyword-nodes)))
               ('tags
                (org-roam-latte--has-common-tag-p keyword-nodes current-node))
               ('node-tags
-               (and (not (member current-node keyword-nodes))
+               (and (not (org-roam-latte--member current-node keyword-nodes))
                     (org-roam-latte--has-common-tag-p keyword-nodes current-node)))
               ((or 'parents 'parents-tags)
                (org-roam-latte--check-ancestors keyword-nodes scope)))))))
@@ -431,9 +442,7 @@ Stores NODE in a list as a text property 'nodes on the KEYWORD string."
              (nodes (get-text-property 0 'nodes value))
              (singularize (org-roam-latte--singularize key)))
         ;; Compare by ID
-        (unless (cl-member (org-roam-node-id node) nodes
-                           :key #'org-roam-node-id
-                           :test #'string=)
+        (unless (org-roam-latte--member node nodes)
           (push node nodes))
         (put-text-property 0 (length value) 'nodes nodes value)
 
@@ -576,7 +585,7 @@ WIN The window object in which the scroll event has occurred."
   (let* ((keyword (org-roam-latte--keyword-at-point))
          (nodes (get-text-property 0 'nodes keyword)))
     (when nodes
-      (member node nodes))))
+      (org-roam-latte--member node nodes))))
 
 ;;
 ;; Public functions
