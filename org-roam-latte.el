@@ -270,7 +270,7 @@ the rules set by `org-roam-latte-exclude-scope' and
                           (_ org-roam-latte-exclude-scope))
                       org-roam-latte-exclude-scope)))
         (when keyword-nodes
-          (let ((current-node (org-roam-node-at-point)))
+          (when-let ((current-node (org-roam-node-at-point)))
             (pcase scope
               ('nil t)
               ('node
