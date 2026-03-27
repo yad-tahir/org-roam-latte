@@ -122,7 +122,10 @@ accepted."
   :group 'org-roam-latte
   :type 'boolean)
 
-(defcustom org-roam-latte-exclude-org-elements '(link node-property keyword)
+(defcustom org-roam-latte-exclude-org-elements '(link
+                                                 node-property
+                                                 keyword
+                                                 src-block)
   "List of Org element types where highlight should not be created.
 
 Common types include `link', `node-property', `keyword', `code', and `verbatim'.
