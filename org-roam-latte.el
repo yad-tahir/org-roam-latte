@@ -125,11 +125,13 @@ accepted."
 (defcustom org-roam-latte-exclude-org-elements '(link
                                                  node-property
                                                  keyword
-                                                 src-block)
+                                                 src-block
+                                                 latex-fragment
+                                                 latex-environment)
   "List of Org element types where highlight should not be created.
 
-Common types include `link', `node-property', `keyword', `code', and `verbatim'.
-See `org-element-all-elements' for a comprehensive list."
+You may call `(org-element-type (org-element-context))' to figure out the Org
+element type at POINT."
   :type '(repeat symbol)
   :group 'org-roam-latte)
 
